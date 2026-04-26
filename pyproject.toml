@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bo-gp-control"
+version = "0.1.0"
+description = "Dynamic crossover and mutation rate control for genetic programming with Bayesian optimization."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "numpy>=1.24,<2.0",
+  "scipy>=1.10,<1.14",
+  "scikit-learn>=1.2,<1.6",
+  "matplotlib>=3.7,<3.9",
+  "deap>=1.4,<2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<9",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
