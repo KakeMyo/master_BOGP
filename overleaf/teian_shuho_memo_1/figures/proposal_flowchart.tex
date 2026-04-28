@@ -1,0 +1,36 @@
+\begin{tikzpicture}[font=\small, node distance=8mm and 20mm]
+  \node[terminator] (start) {Start};
+  \node[block, below=of start, minimum width=38mm] (init) {Initialize population\\
+    $P_{g_0}$, $g_0=0$, $\ell=0$, $\mathcal{D}_0=\emptyset$};
+  \node[block, below=of init, minimum width=38mm] (observe) {Observe state\\
+    build $x_\ell$ from current population};
+  \node[decision, below=of observe, minimum width=24mm] (warmup) {Warm-up\\period?};
+  \node[block, below left=10mm and 18mm of warmup, minimum width=34mm] (design) {Select initial design point\\
+    $u_\ell=(p_c,p_m,k)$};
+  \node[block, below right=10mm and 18mm of warmup, minimum width=36mm] (bo) {Contextual BO\\
+    maximize $\mathrm{EI}(x_\ell,u)$};
+  \node[block, below=23mm of warmup, minimum width=42mm] (evolve) {Apply $u_\ell$ and evolve GP\\
+    hold for $k_\ell$ generations};
+  \node[block, below=of evolve, minimum width=42mm] (stats) {Compute interval statistics\\
+    $HV_{\ell+1}$, $\Delta HV_\ell^{\mathrm{rate}}$, $\bar D_\ell$, $C_k(k_\ell)$};
+  \node[block, below=of stats, minimum width=42mm] (update) {Compute reward $r_\ell$ and update data\\
+    $\mathcal{D}_{\ell+1}=\mathcal{D}_\ell \cup \{(x_\ell,u_\ell,r_\ell)\}$};
+  \node[decision, below=of update, minimum width=24mm] (stop) {Termination\\condition?};
+  \node[terminator, below left=10mm and 18mm of stop] (end) {Stop};
+  \node[block, below right=10mm and 18mm of stop, minimum width=28mm] (increment) {$\ell \leftarrow \ell+1$\\
+    $g_\ell \leftarrow g_{\ell+1}$};
+
+  \draw[line] (start) -- (init);
+  \draw[line] (init) -- (observe);
+  \draw[line] (observe) -- (warmup);
+  \draw[line] (warmup) -- node[above left] {yes} (design);
+  \draw[line] (warmup) -- node[above right] {no} (bo);
+  \draw[line] (design) |- (evolve);
+  \draw[line] (bo) |- (evolve);
+  \draw[line] (evolve) -- (stats);
+  \draw[line] (stats) -- (update);
+  \draw[line] (update) -- (stop);
+  \draw[line] (stop) -- node[above left] {yes} (end);
+  \draw[line] (stop) -- node[above right] {no} (increment);
+  \draw[line] (increment) |- ([xshift=18mm]observe.east) |- (observe.east);
+\end{tikzpicture}

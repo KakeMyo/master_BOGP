@@ -1,0 +1,62 @@
+\documentclass[11pt,a4paper]{ltjsarticle}
+
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,positioning,shapes.geometric}
+
+\geometry{margin=25mm}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  urlcolor=blue
+}
+\tikzset{
+  block/.style={
+    draw,
+    rounded corners=2pt,
+    align=center,
+    minimum width=30mm,
+    minimum height=10mm,
+    fill=gray!8
+  },
+  line/.style={
+    -{Latex[length=2.2mm,width=1.4mm]},
+    thick
+  },
+  decision/.style={
+    draw,
+    diamond,
+    aspect=2,
+    align=center,
+    inner sep=1pt,
+    minimum width=22mm,
+    fill=gray!8
+  },
+  terminator/.style={
+    draw,
+    rounded corners=6pt,
+    align=center,
+    minimum width=22mm,
+    minimum height=8mm,
+    fill=gray!8
+  }
+}
+
+\title{提案手法メモ１}
+\author{}
+\date{\today}
+
+\setcounter{tocdepth}{2}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\clearpage
+
+\input{paper_body}
+
+\end{document}
