@@ -1,0 +1,28 @@
+# How to evaluate solutions in Pareto-based search-based software engineering: A critical review and methodological guidance
+
+- Reference ID: [R19]
+- Status: Adopted
+- Category: C
+- Citation: Li, M., Chen, T., & Yao, X. (2022). *How to evaluate solutions in Pareto-based search-based software engineering: A critical review and methodological guidance*. IEEE Transactions on Software Engineering, 48(5), 1771-1799. https://doi.org/10.1109/TSE.2020.3036108
+- DOI: 10.1109/TSE.2020.3036108
+- URL: https://research.birmingham.ac.uk/en/publications/how-to-evaluate-solutions-in-pareto-based-search-based-software-e/
+- Elsevier URL:
+- Source checked: University of Birmingham publisher PDF metadata and arXiv record.
+- Access: OA publisher PDF / arXiv and institutional pages checked
+- Local PDF:
+- Citation signal:
+- Why this paper matters:
+  - Recent methodological guidance on evaluating Pareto-based search results.
+  - Although domain-specific to search-based software engineering, its discussion of inappropriate or misleading indicator use is useful for this project.
+  - Helps justify selecting evaluation methods according to problem nature and decision-maker preference, not only by convention.
+- Information used in this project:
+  - Use as guidance for matching metrics to claims: HV for combined set quality, IGD/GD when a reference front exists, spread/spacing for distribution, and post-Pareto methods when a single compromise solution is needed.
+- Related note sections:
+  - notes/research_note.md 10.2
+  - Future evaluation protocol for Pareto archive analysis
+- Manual download queries:
+  - Complete title: How to evaluate solutions in Pareto-based search-based software engineering: A critical review and methodological guidance
+  - Author year query: Li Chen Yao 2022 how to evaluate solutions Pareto-based search-based software engineering
+  - DOI: 10.1109/TSE.2020.3036108
+- Next action:
+  - Use the paper for evaluation-protocol caveats rather than as a domain-specific GP baseline.

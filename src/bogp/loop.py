@@ -13,7 +13,11 @@ class GeneticProgrammingEngine(Protocol):
     def snapshot(self) -> GPStateSnapshot:
         ...
 
-    def run_interval(self, control: ControlInput, interval_generations: int) -> IntervalResult:
+    def run_interval(
+        self,
+        control: ControlInput,
+        interval_generations: int | None = None,
+    ) -> IntervalResult:
         ...
 
 
@@ -55,9 +59,15 @@ class ClosedLoopRunner:
                 break
 
             control = self.controller.propose(start_state)
-            interval = getattr(self.controller.config, "control_interval", 1)
+            interval = max(1, int(control.update_period))
             result = self.engine.run_interval(control, interval)
-            reward = compute_reward(result.start_state, result.end_state, self.reward_config)
+            reward = compute_reward(
+                result.start_state,
+                result.end_state,
+                self.reward_config,
+                control=control,
+                interval_diversities=result.diversity_values,
+            )
             self.controller.register_observation(result.start_state, control, reward.total)
 
             record = ClosedLoopRecord(
@@ -79,12 +89,13 @@ class ClosedLoopRunner:
 
     def _append_note(self, note_path: Path, record: ClosedLoopRecord) -> None:
         summary = (
-            "制御ステップ {0} で p_c={1:.3f}, p_m={2:.3f} を適用し、"
-            "報酬 {3:.3f} を観測した。"
+            "制御ステップ {0} で p_c={1:.3f}, p_m={2:.3f}, k={3} を適用し、"
+            "報酬 {4:.3f} を観測した。"
         ).format(
             record.step_index,
             record.control.crossover_rate,
             record.control.mutation_rate,
+            record.control.update_period,
             record.reward.total,
         )
         rationale = "現在の GP 状態に応じた BO 制御の挙動を、研究ノートへ逐次記録するため。"
@@ -102,9 +113,10 @@ class ClosedLoopRunner:
             "停滞世代数: {0}".format(record.end_state.stagnation_generations),
         ]
         validation = [
-            "報酬内訳 hv_term={0:.3f}, diversity_term={1:.3f}".format(
+            "報酬内訳 hv_term={0:.3f}, diversity_term={1:.3f}, control_cost={2:.3f}".format(
                 record.reward.hv_term,
                 record.reward.diversity_term,
+                record.reward.control_cost,
             )
         ]
         next_actions = ["実 GP 実装へ接続し、同じ形式でログを継続する。"]
@@ -117,4 +129,3 @@ class ClosedLoopRunner:
             validation=validation,
             next_actions=next_actions,
         )
-

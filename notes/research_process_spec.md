@@ -35,7 +35,7 @@
 | 閉ループ実行器 | 実装済み | `src/bogp/loop.py` |
 | 文脈ベクトル正規化 | 実装済み | `src/bogp/context_metrics.py` |
 | 報酬関数 | 実装済み | `src/bogp/objectives.py` |
-| toy engine | 実装済み | `src/bogp/toy_engine.py` |
+| toy engine | 実装済み | `src/bogp/test_v1_toy_engine.py` |
 | 構造多様性・意味多様性 | 実装済み | `src/bogp/diversity.py` |
 | 参考文献管理 | 整備済み | `references/README.md`, `references/reference_workflow_spec.md` |
 

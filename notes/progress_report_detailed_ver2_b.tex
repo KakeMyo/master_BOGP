@@ -1,0 +1,414 @@
+% !TEX program = lualatex
+\documentclass[a4paper,11pt]{ltjsarticle}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\geometry{margin=24mm}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc}
+
+\title{研究進捗詳細レポート\\ver1 から ver2\_b までの実装改善と予備実験結果}
+\author{}
+\date{2026年5月26日}
+
+\newcommand{\HV}{\mathrm{HV}}
+\newcommand{\ND}{\mathrm{ND}}
+\newcommand{\BO}{\mathrm{BO}}
+
+\begin{document}
+\maketitle
+
+\section{本レポートの目的}
+
+本レポートは，小発表および今後の本格実験に向けて，
+これまでに実装した多目的 GP + 文脈付き BO 制御テンプレートの進捗を整理するものである．
+特に，初期実装である ver1 から，archive 整理を導入した ver2，
+さらに archive 評価と population 状態観測を分離した ver2\_b までについて，
+何を改善したか，なぜ改善したか，どのように改善したか，結果として何が分かったかをまとめる．
+
+本研究の大枠は，GP をプラント，BO を制御器とみなし，
+世代状態に応じて交叉率 \(p_c\)，突然変異率 \(p_m\)，更新周期 \(k\) を決める
+状態依存・閉ループ制御である．
+最終的な目的は，多目的 GP により望ましい Pareto front または非劣解集合を得ることである．
+
+\section{提案手法の基本構造}
+
+提案手法では，制御更新ステップ \(\ell\) において，現在の GP 状態を文脈ベクトル
+\[
+x_\ell =
+[
+\tau_\ell,
+\widetilde{\HV}_\ell,
+\widetilde{\Delta \HV}_\ell,
+D_\ell,
+\widetilde{L}_\ell,
+\widetilde{s}_\ell
+]^\top
+\]
+として観測する．
+BO 制御器はこの文脈を条件として，
+\[
+u_\ell=(p_{c,\ell},p_{m,\ell},k_\ell)
+\]
+を出力する．
+ここで \(k_\ell\) は次回の制御更新までの世代数であり，
+単なる計算効率化のための値ではなく，制御周期そのものを表す操作入力である．
+
+\begin{figure}[htbp]
+\centering
+\resizebox{0.94\linewidth}{!}{%
+\begin{tikzpicture}[
+  node distance=9mm and 15mm,
+  block/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=40mm, minimum height=9mm, fill=blue!6},
+  controller/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=42mm, minimum height=10mm, fill=orange!12},
+  plant/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=42mm, minimum height=10mm, fill=green!10},
+  data/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=42mm, minimum height=9mm, fill=purple!8},
+  arrow/.style={-Latex, thick},
+  labelbox/.style={fill=white, inner sep=1.5pt}
+]
+\node[block] (obs) {状態観測\\ \(x_\ell\)};
+\node[controller, right=28mm of obs] (bo) {文脈付き BO\\ GP surrogate + EI};
+\node[data, below=12mm of bo] (act) {制御入力\\ \(p_c,p_m,k\)};
+\node[plant, below=12mm of obs] (plant) {多目的 GP\\ \(k\) 世代実行};
+\node[block, below=12mm of plant] (eval) {区間評価\\ \(\Delta\HV^{rate},\bar{D},C_k\)};
+\node[data, right=28mm of eval] (hist) {履歴更新\\ \((x,u,r)\)};
+
+\draw[arrow] (obs.east) -- node[labelbox, above] {文脈} (bo.west);
+\draw[arrow] (bo.south) -- node[labelbox, right] {獲得関数最大化} (act.north);
+\draw[arrow] (act.west) -| node[labelbox, below, near start] {操作率と更新周期} (plant.east);
+\draw[arrow] (plant.south) -- node[labelbox, left] {進化結果} (eval.north);
+\draw[arrow] (eval.east) -- node[labelbox, above] {報酬} (hist.west);
+\draw[arrow] (hist.east) -- ++(12mm,0) |- node[labelbox, right, pos=0.35] {BO更新} (bo.east);
+\draw[arrow] (plant.west) -- ++(-12mm,0) |- node[labelbox, left, near end] {次状態} (obs.west);
+\end{tikzpicture}
+}
+\caption{提案手法の基本的な閉ループ構造}
+\label{fig:closed_loop}
+\end{figure}
+
+\section{ver1: まず動く雛型を作る段階}
+
+\subsection{実装したこと}
+
+ver1 では，まず問題非依存の多目的 GP テンプレートを作成し，
+そこに文脈付き BO 制御器を接続した．
+GP 本体は NSGA-II 型の非優越ソートと crowding distance による多目的選択を行い，
+親選択にはトーナメント選択を用いた．
+また，比較対象として，固定交叉率・固定突然変異率を用いる普通の GP も実装した．
+
+評価問題は次の 2 種類である．
+\begin{itemize}[leftmargin=3em]
+  \item テンプレート問題: 簡単な記号回帰風の 2 目的 GP．目的は MSE と木サイズの最小化．
+  \item 構造探索問題: ばね・ダンパ・直列・並列構造を探索する 2 目的問題．目的は要素数とインパルス応答積分の最小化．
+\end{itemize}
+
+\subsection{なぜ ver1 が必要だったか}
+
+この段階の目的は，研究アイデアそのものが実装可能かを確認することであった．
+具体的には，BO が GP 状態を受け取り，\(p_c,p_m,k\) を返し，
+その設定で GP が進化し，報酬を BO に戻せるかを検証した．
+したがって，ver1 は最終的な評価基盤というより，
+提案手法の最小動作確認としての位置づけである．
+
+\subsection{ver1 の結果}
+
+\begin{table}[htbp]
+\centering
+\caption{ver1 における普通 GP との比較}
+\begin{tabular}{llll}
+\toprule
+問題 & 手法 & 最終 HV & 最終 Diversity \\
+\midrule
+テンプレート & 提案手法 & 0.989368 & 0.524566 \\
+テンプレート & 普通 GP & 0.979405 & 0.347826 \\
+構造探索 & 提案手法 & 0.999546 & 0.783334 \\
+構造探索 & 普通 GP & 0.999533 & 0.750047 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+テンプレート問題では，提案手法が普通 GP より高い HV と多様性を示した．
+構造探索問題でも，提案手法の方がわずかに高い HV と多様性を示した．
+このため，状態依存に \(p_c,p_m,k\) を制御する方針には一定の可能性があると判断した．
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.88\linewidth]{outputs/template_plain_vs_bogp/20260512_173147/hv_diversity_comparison.png}
+\caption{ver1: テンプレート問題における HV と Diversity の比較}
+\label{fig:v1_template}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.88\linewidth]{outputs/structural_plain_vs_bogp/20260512_180049/hv_diversity_comparison.png}
+\caption{ver1: 構造探索問題における HV と Diversity の比較}
+\label{fig:v1_structural}
+\end{figure}
+
+\subsection{ver1 で見えた課題}
+
+ver1 では提案手法が動くことは確認できたが，次の課題が残った．
+
+\begin{enumerate}[leftmargin=3em]
+  \item archive に同一目的値・同一構造の重複個体が含まれ，archive size を過大評価する可能性があった．
+  \item HV や最終 Pareto front を，現在集団で見るべきか，探索全体の archive で見るべきかが曖昧であった．
+  \item 提案手法側は \(k\) 世代ごとの制御更新点で記録されるため，普通 GP の各世代推移と比較しにくかった．
+  \item 構造探索問題では，トポロジーが同じでもばね定数や減衰係数が異なる設計をどう扱うかが未整理であった．
+\end{enumerate}
+
+特に構造探索問題では，ver1 の提案手法 archive size が 63，普通 GP が 57 であり，
+一見すると多くの候補解を得ているように見えた．
+しかし，この値は重複を含む保存数であり，実質的な Pareto 候補数とは限らない．
+
+\section{ver2: archive の重複整理と世代別可視化}
+
+\subsection{改善したこと}
+
+ver2 では，archive を目的値と構造のペアで重複除去するようにした．
+同じ目的値・同じ構造を持つ個体が複数保存されても，
+Pareto front の広がりや設計候補の多様性を増やしたことにはならないためである．
+
+追加した主な指標は次の通りである．
+\begin{itemize}[leftmargin=3em]
+  \item archive size: 重複除去後の archive 個体数
+  \item unique objective size: 目的値として異なる点の数
+  \item unique structure size: 構造として異なる候補数
+  \item unique pair size: 目的値と構造のペアとして異なる候補数
+\end{itemize}
+
+また，提案手法と普通 GP を世代単位で比較できるように，
+各世代の HV と Diversity のログおよび図を追加した．
+
+\subsection{ver2 の結果}
+
+\begin{table}[htbp]
+\centering
+\caption{ver2 における archive 重複整理後の結果}
+\begin{tabular}{llllll}
+\toprule
+問題 & 手法 & 最終 HV & Diversity & archive & unique obj. \\
+\midrule
+テンプレート & 提案手法 & 0.989368 & 0.524566 & 5 & 5 \\
+テンプレート & 普通 GP & 0.979405 & 0.347826 & 2 & 2 \\
+構造探索 & 提案手法 & 0.999546 & 0.783334 & 9 & 9 \\
+構造探索 & 普通 GP & 0.999533 & 0.750047 & 7 & 7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+ver1 では構造探索の提案手法 archive size が 63 であったが，
+ver2 では 9 となった．
+この結果から，ver1 の archive size は重複を多く含んでいたことが分かる．
+一方で，HV や Diversity の傾向は大きく変わらなかったため，
+重複除去は探索挙動そのものというより，評価結果の解釈を正確にするための改善であったといえる．
+
+\section{ver2\_b: archive 評価と population 状態観測の分離}
+
+\subsection{改善の考え方}
+
+ver2\_b では，評価対象を次のように分担した．
+\[
+\begin{array}{ll}
+\text{archive } A_g &: \text{成果評価，HV，報酬の進捗項，最終 Pareto front}\\
+\text{population } P_g &: \text{現在の探索状態，多様性，平均木サイズ}
+\end{array}
+\]
+
+この分担にした理由は，最終的に欲しいものが
+「最後の世代にたまたま残った集団」ではなく，
+「探索全体を通じて得られた良い非劣解集合」だからである．
+一方で，BO が制御に使う探索状態は，過去の成果物ではなく現在集団から取るべきである．
+
+archive 更新は次の式で表す．
+\[
+A_{g+1}=\ND(A_g\cup P_g\cup Q_g)
+\]
+ここで，\(Q_g\) は世代 \(g\) で生成・評価された offspring である．
+この更新により，次世代選択で落ちた個体でも，
+一度でも有用な非劣解として得られた場合は archive に保存できる．
+
+\begin{figure}[htbp]
+\centering
+\resizebox{0.95\linewidth}{!}{%
+\begin{tikzpicture}[
+  node distance=9mm and 13mm,
+  block/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=36mm, minimum height=9mm, fill=blue!6},
+  archive/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=42mm, minimum height=9mm, fill=orange!12},
+  pop/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=42mm, minimum height=9mm, fill=green!10},
+  arrow/.style={-Latex, thick},
+  labelbox/.style={fill=white, inner sep=1pt}
+]
+\node[pop] (pg) {\(P_g\)\\現在集団};
+\node[block, right=of pg] (ops) {交叉・突然変異\\ \(p_c,p_m\)};
+\node[pop, right=of ops] (qg) {\(Q_g\)\\offspring};
+\node[archive, below=13mm of ops] (ag) {\(A_{g+1}=\ND(A_g\cup P_g\cup Q_g)\)\\外部 archive};
+\node[block, below=13mm of ag] (eval) {archive HV と\\ population diversity};
+
+\draw[arrow] (pg) -- (ops);
+\draw[arrow] (ops) -- (qg);
+\draw[arrow] (pg.south) |- (ag.west);
+\draw[arrow] (qg.south) |- (ag.east);
+\draw[arrow] (ag) -- (eval);
+\end{tikzpicture}
+}
+\caption{ver2\_b における archive と population の役割分担}
+\label{fig:archive_population}
+\end{figure}
+
+\subsection{構造キーの b1 / b2}
+
+ver2\_b では，archive の構造重複判定を切り替えられるようにした．
+
+\begin{table}[htbp]
+\centering
+\caption{ver2\_b における構造キーの 2 条件}
+\begin{tabular}{lll}
+\toprule
+版 & 構造キー & 意味 \\
+\midrule
+ver2\_b1 & topology & ノード種別と arity のみで構造を判定する \\
+ver2\_b2 & topology\_value & topology に加えてノード値も構造キーに含める \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+構造探索問題では，ばね定数や減衰係数が異なれば，同じトポロジーでも別設計とみなせる．
+そのため，b2 では同じ目的値を持つ別パラメータ設計を archive に残せる．
+
+\subsection{ver2\_b の結果}
+
+\begin{table}[htbp]
+\centering
+\caption{ver2\_b におけるテンプレート問題の結果}
+\begin{tabular}{llllll}
+\toprule
+版 & 手法 & archive HV & population HV & Diversity & archive \\
+\midrule
+ver2\_b1 & 提案手法 & 0.989710 & 0.989710 & 0.592879 & 6 \\
+ver2\_b1 & 普通 GP & 0.979405 & 0.979405 & 0.347826 & 2 \\
+ver2\_b2 & 提案手法 & 0.989710 & 0.989710 & 0.592879 & 6 \\
+ver2\_b2 & 普通 GP & 0.979405 & 0.979405 & 0.347826 & 2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+テンプレート問題では，b1 と b2 に差は出なかった．
+これは，最終 archive 内に，目的値とトポロジーが同じで値だけが異なる個体がほとんど現れなかったためと考えられる．
+ただし，ver1 と比較すると提案手法の HV と Diversity は少し改善している．
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\linewidth]{outputs/template_plain_vs_bogp_test_ver2_b1/20260520_173956/archive_population_hv_diversity_comparison.png}
+\caption{ver2\_b1: テンプレート問題における archive HV，population HV，population diversity}
+\label{fig:v2b_template}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\caption{ver2\_b における構造探索問題の結果}
+\begin{tabular}{lllllll}
+\toprule
+版 & 手法 & archive HV & population HV & Diversity & archive & unique structure \\
+\midrule
+ver2\_b1 & 提案手法 & 0.999546 & 0.999546 & 0.783334 & 9 & 9 \\
+ver2\_b1 & 普通 GP & 0.999533 & 0.999533 & 0.750047 & 7 & 7 \\
+ver2\_b2 & 提案手法 & 0.999546 & 0.999546 & 0.783334 & 10 & 10 \\
+ver2\_b2 & 普通 GP & 0.999533 & 0.999533 & 0.750047 & 7 & 7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+構造探索問題では，b1 と b2 で HV や Diversity は変わらなかった．
+一方で，b2 では提案手法の archive size が 9 から 10 に増え，
+unique structure も 10 となった．
+これは，同じ目的値を持つがパラメータ値込みでは異なる構造設計が 1 つ追加で保存されたことを示す．
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\linewidth]{outputs/structural_plain_vs_bogp_test_ver2_b2/20260520_172026/archive_population_hv_diversity_comparison.png}
+\caption{ver2\_b2: 構造探索問題における archive HV，population HV，population diversity}
+\label{fig:v2b_structural}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.86\linewidth]{outputs/structural_plain_vs_bogp_test_ver2_b2/20260520_172026/pareto_front_unique_objectives.png}
+\caption{ver2\_b2: 構造探索問題における unique objective Pareto archive}
+\label{fig:v2b_pareto}
+\end{figure}
+
+\section{ver1 から ver2\_b までの改善まとめ}
+
+\begin{table}[htbp]
+\centering
+\caption{各バージョンの位置づけ}
+\begin{tabular}{llll}
+\toprule
+版 & 主目的 & 改善内容 & 意味 \\
+\midrule
+ver1 & 最小動作確認 & BO 制御 GP と普通 GP の比較 & 提案法が動くことを確認 \\
+ver2 & archive 整理 & 目的値・構造ペアで重複除去 & Pareto front の解釈を正確化 \\
+ver2 & 可視化強化 & 各世代 HV / Diversity を記録 & 普通 GP と比較しやすくする \\
+ver2\_b & 評価設計整理 & archive と population を分離 & 成果評価と状態観測を明確化 \\
+ver2\_b & 構造キー比較 & topology / topology\_value を切替 & 設計候補の扱いを比較可能に \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+重要なのは，ver2 以降の改善は，提案手法の BO 制御則そのものを大きく変えたものではない点である．
+中心となる制御則 \(f(x,p_c,p_m,k)\) は維持しつつ，
+実験結果を正しく読むための評価基盤を整えた．
+
+\section{考察}
+
+\subsection{提案手法の有望性}
+
+テンプレート問題では，提案手法が普通 GP より高い HV と Diversity を示している．
+このことから，少なくとも小規模な 2 目的 GP 問題では，
+状態に応じて \(p_c,p_m,k\) を変えることで，
+固定率 GP より探索と収束のバランスを取りやすい可能性がある．
+
+\subsection{構造探索問題での注意点}
+
+構造探索問題では，提案手法の方が普通 GP よりわずかに高い HV と Diversity を示した．
+しかし，HV は初期から高く，早期に飽和している．
+そのため，現段階の構造探索実験だけでは，提案手法の優位性を強く主張するにはまだ弱い．
+
+この原因として，次が考えられる．
+\begin{itemize}[leftmargin=3em]
+  \item 問題が小さく，良い解に到達しやすい．
+  \item HV の参照点や正規化範囲が広く，差が見えにくい．
+  \item 目的関数が 2 目的のみで，探索の難しさが十分でない．
+  \item seed が 1 つであり，乱数依存のばらつきを評価できていない．
+\end{itemize}
+
+\subsection{archive size の解釈}
+
+ver1 の archive size は，重複を含む保存数であり，実質的な Pareto 候補数としては過大であった．
+ver2 以降で unique objective，unique structure，unique pair を分けたことで，
+archive の意味が明確になった．
+
+特に構造探索では，b2 により同じ目的値でもパラメータ値が異なる設計を保持できるようになった．
+これは HV には現れないが，設計候補の多様性という観点では重要である．
+
+\section{今後の方針}
+
+本格実験に向けて，次の順に進めるのが望ましい．
+
+\begin{enumerate}[leftmargin=3em]
+  \item 複数 seed 実験を実施し，平均・標準偏差・箱ひげ図で結果を見る．
+  \item 構造探索問題の HV 参照点と正規化範囲を見直し，差が見える評価設定にする．
+  \item 比較対象を固定率 GP だけでなく，複数固定率，手設計スケジュール，非文脈 BO に広げる．
+  \item ablation として，多様性項なし，\(k\) 制御なし，b1/b2 の差を比較する．
+  \item 最終評価指標として，HV，Diversity，unique objective，unique structure，制御回数をまとめる．
+\end{enumerate}
+
+現時点の結論として，ver2\_b によって評価基盤はかなり整った．
+次の課題は，提案手法の優位性を検証できるだけの実験条件を整えることである．
+
+\end{document}

@@ -63,6 +63,6 @@ def build_context_vector(
         normalize_hypervolume(hypervolume, config),
         normalize_hv_delta(recent_hv_delta, config),
         clip(diversity, 0.0, 1.0),
-        normalize_stagnation(stagnation_generations, config),
         normalize_tree_size(mean_tree_size, config),
+        normalize_stagnation(stagnation_generations, config),
     ]

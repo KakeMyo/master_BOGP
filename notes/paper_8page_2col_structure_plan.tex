@@ -1,0 +1,463 @@
+% !TEX program = lualatex
+\documentclass[a4paper,10pt,twocolumn]{ltjsarticle}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{url}
+\geometry{top=18mm,bottom=20mm,left=16mm,right=16mm,columnsep=7mm}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  citecolor=blue,
+  urlcolor=blue
+}
+
+\title{8ページ2段組論文の構成案\\
+\large Friedman-I 本実験結果に基づく \texttt{bo\_current} 方針}
+\author{}
+\date{2026年06月08日}
+
+\newcommand{\HV}{\mathrm{HV}}
+\newcommand{\pc}{p_c}
+\newcommand{\pmut}{p_m}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+本メモは，Friedman-I symbolic regression を対象とした本実験結果をもとに，
+8ページ上限の2段組論文へまとめるための章構成案である．
+本文では，多目的 GP における交叉率 \(\pc\)，突然変異率 \(\pmut\)，
+更新周期 \(k\) を，探索状態に応じて文脈付きベイズ最適化により決定する
+閉ループ制御手法を提案する．
+構成案では，採用する文献番号，図表配置，主張の強弱，および今回の実験結果から
+無理なく述べられる結論を整理する．
+\end{abstract}
+
+\section{論文全体の主張}
+
+本論文で最も強く打ち出す主張は，
+GP の操作率設定を単なる固定ハイパーパラメータ調整として扱うのではなく，
+探索状態を観測して制御入力を逐次決める閉ループ制御問題として定式化する点である．
+提案法では，現在の世代状態 \(x_\ell\) を文脈として観測し，
+\[
+  u_\ell = (p_{c,\ell},p_{m,\ell},k_\ell)
+\]
+を文脈付き BO により決定する．
+ここで \(k_\ell\) は次回制御更新までの世代数であり，
+操作強度だけでなく更新周期も制御対象に含める．
+
+実験結果から主張できる範囲は，現時点では次のように整理する．
+\texttt{bo\_current} は標準固定率 GP より final archive \(\HV\) を改善し，
+100 seed において安定した性能を示した．
+一方で，高突然変異固定率 GP が平均 final \(\HV\) では最良であったため，
+「閉ループ制御の有効性は確認できるが，強く調整された固定率を一貫して超えるには
+報酬設計や BO 制御器の改善が必要である」という慎重な結論にする．
+
+\section{8ページ配分}
+
+2段組では，単段組より1ページあたりの情報量が増える一方，
+図表が横幅を取りやすいため，中心図と主要結果表は慎重に配置する．
+推奨するページ配分を表\ref{tab:page-budget}に示す．
+
+\begin{table}[tb]
+\centering
+\caption{8ページ2段組におけるページ配分案}
+\label{tab:page-budget}
+\small
+\begin{tabular}{@{}p{0.40\linewidth}cp{0.36\linewidth}@{}}
+\toprule
+項目 & 分量 & 役割 \\
+\midrule
+Abstract & 0.25 & 問題，手法，結果を圧縮 \\
+1. Introduction & 0.80 & 背景，課題，貢献 \\
+2. Related Work & 0.85 & GP，MOGP，BO，評価指標 \\
+3. Proposed Method & 1.65 & 数理定義，制御則，報酬 \\
+4. Experimental Setup & 0.95 & Friedman-I，手法，条件 \\
+5. Results & 1.55 & 表，推移図，差分比較 \\
+6. Discussion & 0.95 & 解釈，限界，改善点 \\
+7. Conclusion & 0.30 & 結論と今後 \\
+References & 0.70 & 主要文献11件程度 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{章構成案}
+
+\subsection{Abstract}
+
+Abstract では，次の4文程度に圧縮する．
+第1文で，多目的 GP における固定操作率の問題を述べる．
+第2文で，\(\pc,\pmut,k\) を文脈付き BO で決定する閉ループ制御法を提案すると述べる．
+第3文で，Friedman-I symbolic regression の accuracy--complexity Pareto 探索で評価したと述べる．
+第4文で，標準固定率 GP を上回ったが，高突然変異固定率には届かない条件があり，
+今後の改善点も明確になった，という正直な結論を述べる．
+
+\subsection{1. Introduction}
+
+導入では，GP の操作率が探索多様性，収束速度，最終的な Pareto front に影響することを述べる．
+symbolic regression の benchmark 選定では，単純すぎる toy problem のみで結論づける危険性が
+指摘されているため\cite{mcdermott2012,white2013}，
+本研究では Friedman-I を用いた accuracy--complexity の2目的設定を採用する．
+SRBench は symbolic regression を再現可能な benchmark として整理しており\cite{lacava2021}，
+また MOGP symbolic regression では低複雑度個体の過剰複製や多様性低下が問題となり得る
+\cite{liu2022}．
+
+この背景から，本研究では固定率 GP を置き換えるだけではなく，
+世代状態を観測して操作強度と更新周期を切り替える状態依存制御として提案法を位置づける．
+Introduction の最後には，貢献を次の3点で列挙する．
+
+\begin{enumerate}
+  \item GP の操作率設定を，状態観測に基づく閉ループ制御問題として定式化する．
+  \item \(\pc,\pmut\) に加えて \(k\) を制御対象に含め，操作強度と更新周期を同時に扱う．
+  \item Friedman-I の2目的 GP 実験により，標準固定率 GP に対する改善と，強い固定率 baseline に対する課題を示す．
+\end{enumerate}
+
+\subsection{2. Related Work}
+
+Related Work は2小節に分ける．
+
+\paragraph{2.1 Multi-objective GP and symbolic regression}
+NSGA-II は多目的最適化に広く使われる枠組みであり，
+非劣ソートと crowding distance により Pareto front 近似を得る\cite{verma2021}．
+本研究では，GP 個体の精度と木サイズを2目的として扱い，
+archive の \(\HV\) により成果集合を評価する．
+解集合の評価では，単一指標だけでなく多面的な品質評価が重要である\cite{li2019}．
+\(\HV\) は Pareto 解集合の収束性と広がりを同時に反映する代表的な指標であるが，
+参照点や計算方法に注意が必要である\cite{guerreiro2021}．
+また，GP の多様性は探索継続性に関わるため，
+構造多様性や意味多様性の観測が重要である\cite{burlacu2024}．
+
+\paragraph{2.2 Bayesian optimization as an outer controller}
+文脈付き BO は，現在の文脈を条件として行動を選択する black-box 最適化の枠組みであり，
+本研究の「世代状態を条件に操作率を選ぶ」設計の基礎となる\cite{krause2011}．
+BO の獲得関数としては，Expected Improvement を用いる．
+EI は EGO において代表的に用いられる基準であり，
+surrogate model 上で改善期待値を評価して次の点を選ぶ\cite{jones1998}．
+さらに，本研究の \(k\) は離散的な更新周期であるため，
+整数・カテゴリ変数を含む BO では連続変数と同様に扱うことへの注意が必要である
+\cite{garrido2020}．
+
+\subsection{3. Proposed Method}
+
+この章が論文の中心である．
+最初に，GP をプラント，BO を制御器とみなす中心図を図\ref{fig:closed-loop-plan}として置く．
+この図は可能なら \texttt{figure*} で2段抜きにし，
+読者が一目で「閉ループである」と分かるようにする．
+
+\begin{figure*}[tb]
+  \centering
+  \fbox{\parbox{0.92\linewidth}{
+  \centering
+  \vspace{2mm}
+  State observation
+  \(\rightarrow\)
+  Contextual BO
+  \(\rightarrow\)
+  action \(u_\ell=(\pc,\pmut,k)\)
+  \(\rightarrow\)
+  GP plant
+  \(\rightarrow\)
+  interval statistics
+  \(\rightarrow\)
+  reward \(r_\ell\)
+  \(\rightarrow\)
+  BO update
+  \vspace{2mm}
+  }}
+  \caption{提案法の中心図として配置する閉ループ制御構造の図案．
+  実際の論文では，観測量 \(\tau,\HV,\Delta\HV,D,\bar{L},s\)，
+  制御入力 \(\pc,\pmut,k\)，学習データ \((x_\ell,u_\ell,r_\ell)\) を明示する．}
+  \label{fig:closed-loop-plan}
+\end{figure*}
+
+数理定義は次の順序で書く．
+GP の世代番号を \(g\)，BO の制御ステップを \(\ell\) とし，
+\[
+  g_{\ell+1}=g_\ell+k_\ell,\qquad
+  P_{g_{\ell+1}}=F(P_{g_\ell},u_\ell,\xi_\ell)
+\]
+で閉ループの時間構造を定義する．
+状態ベクトルは
+\[
+x_\ell =
+\left[
+\tau_\ell,
+\widetilde{\HV}_\ell,
+\widetilde{\Delta \HV}_\ell,
+D_\ell,
+\widetilde{L}_\ell,
+\widetilde{s}_\ell
+\right]^\top
+\]
+とする．
+行動は \(u_\ell=(p_{c,\ell},p_{m,\ell},k_\ell)\) であり，
+\(\pc+\pmut\leq 1\)，\(k\in\mathcal{K}\) とする．
+
+報酬は，区間総改善量ではなく世代あたり改善量を主項とする．
+\[
+\Delta\HV^{\mathrm{rate}}_\ell =
+\frac{\HV_{\ell+1}-\HV_\ell}{k_\ell}
+\]
+これにより，大きい \(k\) が単に長い区間を使って改善量を稼ぐ不公平を抑える．
+多様性項には区間平均多様性 \(\bar{D}_\ell\) を用い，
+制御コスト項で過剰な密更新を弱く抑制する．
+
+\[
+r_\ell =
+w_p \widetilde{\Delta\HV}^{\mathrm{rate}}_\ell
++ w_d S_D(\bar{D}_\ell,\tau_{\ell+1})
+- w_c C_k(k_\ell)
+\]
+
+BO の学習対象は，
+\[
+  r=f(x_\ell,\pc,\pmut,k)
+\]
+であり，非文脈 BO の
+\[
+  r=f(\pc,\pmut,k)
+\]
+と明確に対比する．
+この差分が新規性の軸である．
+
+\subsection{4. Experimental Setup}
+
+実験章では，対象問題，目的関数，比較手法，世代数の定義を簡潔に固定する．
+対象問題は Friedman-I symbolic regression であり，
+\[
+y=
+10\sin(\pi x_1x_2)
++20(x_3-0.5)^2
++10x_4
++5x_5
+\]
+を用いる．
+目的関数は訓練 NRMSE と木サイズの2目的最小化である．
+Friedman-I は，変数間相互作用，非線形項，線形項を含み，
+単純すぎる確認用問題よりも GP benchmark として説明しやすい\cite{mcdermott2012,white2013,lacava2021}．
+
+\begin{table}[tb]
+\centering
+\caption{実験条件の要約}
+\label{tab:experiment-setting-plan}
+\begin{tabular}{ll}
+\toprule
+項目 & 設定 \\
+\midrule
+問題 & Friedman-I symbolic regression \\
+目的 & NRMSE, tree size \\
+seed 数 & 100 \\
+集団サイズ & 24 \\
+warm-up & 18 generations \\
+評価世代数 & 60 generations \\
+総世代数 & 78 generations \\
+評価回数 & 1872 / run \\
+比較手法 & 固定率3条件, \texttt{bo\_current} \\
+主指標 & final archive \(\HV\) \\
+副指標 & diversity, HV-AUC, post-warm-up gain \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{5. Results}
+
+Results では，表\ref{tab:main-results-plan}を最重要表として置く．
+この表だけで，提案法が標準固定率を上回る一方，
+高突然変異固定率には平均で届いていないことが分かる．
+この正直な結果整理が，後の Discussion の説得力になる．
+
+\begin{table*}[tb]
+\centering
+\caption{Friedman-I 本実験の主要結果}
+\label{tab:main-results-plan}
+\begin{tabular}{lrrrr}
+\toprule
+手法 & final HV mean & final HV std & diversity mean & post-warm-up HV gain \\
+\midrule
+\texttt{plain\_fixed\_standard} & 0.782991 & 0.055371 & 0.624480 & 0.056333 \\
+\texttt{plain\_fixed\_high\_mutation} & 0.808315 & 0.029862 & 0.646372 & 0.071250 \\
+\texttt{plain\_fixed\_high\_crossover} & 0.794766 & 0.029513 & 0.630678 & 0.054044 \\
+\texttt{bogp\_current} & 0.802461 & 0.022454 & 0.640513 & 0.062183 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+図は多く入れすぎない．
+本文に入れる候補は図\ref{fig:result-hv-diversity-plan}と図\ref{fig:result-progress-plan}である．
+\(\HV\) 箱ひげ図，paired difference，Pareto front はページに余裕があれば追加し，
+難しければ付録または発表資料へ回す．
+
+\begin{figure}[tb]
+  \centering
+  \includegraphics[width=\linewidth]{outputs/main_bo_current_friedman/sr_alpha_friedman/main_bo_current_friedman_seed100_eval60_20260603/main_final_hv_diversity.png}
+  \caption{final archive \(\HV\) と diversity の平均および標準偏差．}
+  \label{fig:result-hv-diversity-plan}
+\end{figure}
+
+\begin{figure}[tb]
+  \centering
+  \includegraphics[width=\linewidth]{outputs/main_bo_current_friedman/sr_alpha_friedman/main_bo_current_friedman_seed100_eval60_20260603/main_hv_mean_progress.png}
+  \caption{archive \(\HV\) の世代推移．破線は warm-up 終了世代を示す．}
+  \label{fig:result-progress-plan}
+\end{figure}
+
+paired comparison は文章で次のように述べる．
+\texttt{bo\_current} は標準固定率 GP に対して，
+seed 内 final \(\HV\) 差分平均 \(+0.019469\) を示し，
+70 seed で勝ち，28 seed で負けた．
+一方，高突然変異固定率 GP に対しては差分平均 \(-0.005854\) であり，
+40 seed で勝ち，59 seed で負けた．
+
+\subsection{6. Discussion}
+
+Discussion では，結果を過大に主張しない．
+述べるべき要点は次の3つである．
+第一に，状態依存制御は標準固定率 GP より良い結果を示したため，
+固定率を全世代で使い続ける設計には改善余地がある．
+第二に，高突然変異固定率が最良平均を示したことから，
+現在の報酬設計または BO 制御器は，Friedman-I における有効な突然変異強度を
+まだ十分に学習し切れていない可能性がある．
+第三に，\texttt{bo\_current} の final \(\HV\) 標準偏差は最小であり，
+閉ループ制御は最良平均性能よりも安定性に寄与している可能性がある．
+
+この章では，\(k=1\) が多く選ばれた点も重要である．
+Friedman-I では短い更新周期が多く選ばれたが，
+これは探索状態の変化が大きいと判断された可能性と，
+EI 比較や warm-up 設計が短周期を選びやすくしている可能性の両方がある．
+したがって，今後は reward scaling，\(k\) 別 surrogate，warm-up の均衡化，
+非文脈 BO との切り分け実験が必要である．
+
+\subsection{7. Conclusion}
+
+Conclusion では，次のように締める．
+本研究は，多目的 GP の操作率設定を状態依存の閉ループ制御として定式化し，
+\(\pc,\pmut,k\) を文脈付き BO により逐次決定する枠組みを示した．
+Friedman-I symbolic regression における初期本実験では，
+提案法は標準固定率 GP を上回り，安定した \(\HV\) を示した．
+一方で，強い固定率 baseline を常に上回るには至っておらず，
+BO 制御器と報酬設計の改善が今後の課題である．
+
+\section{図表配置計画}
+
+8ページ上限では，図表は表\ref{tab:figure-table-plan}の5点程度に絞るのがよい．
+
+\begin{table}[tb]
+\centering
+\caption{本文に入れる図表の優先順位}
+\label{tab:figure-table-plan}
+\begin{tabular}{cll}
+\toprule
+優先 & 種類 & 内容 \\
+\midrule
+1 & 図 & 閉ループ制御の中心図 \\
+2 & 表 & 状態・行動・報酬の定義 \\
+3 & 表 & 実験条件と比較手法 \\
+4 & 表 & final HV など主要結果 \\
+5 & 図 & HV 推移または final HV/diversity \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{文献番号と本文での使い方}
+
+本文では，どの主張がどの文献に基づくかを曖昧にしない．
+表\ref{tab:citation-map}に引用対応を示す．
+
+\begin{table*}[tb]
+\centering
+\caption{引用番号と本文中での用途}
+\label{tab:citation-map}
+\begin{tabular}{cll}
+\toprule
+番号 & 文献 & 本文中での用途 \\
+\midrule
+{[1]} & McDermott et al. (2012) & GP benchmark 選定の問題意識 \\
+{[2]} & White et al. (2013) & GP benchmark の実験厳密性，複数 seed \\
+{[3]} & La Cava et al. (2021) & symbolic regression benchmark と SRBench \\
+{[4]} & Liu et al. (2022) & MOGP SR における低複雑度個体，多様性問題 \\
+{[5]} & Verma et al. (2021) & NSGA-II の概要と多目的評価 \\
+{[6]} & Krause and Ong (2011) & 文脈付き BO の根拠 \\
+{[7]} & Jones et al. (1998) & EI / EGO の根拠 \\
+{[8]} & Garrido-Merchan and Hernandez-Lobato (2020) & 離散・整数変数 BO と \(k\) の扱い \\
+{[9]} & Li and Yao (2019) & 多目的解集合の品質評価 \\
+{[10]} & Guerreiro et al. (2021) & Hypervolume indicator \\
+{[11]} & Burlacu et al. (2024) & GP symbolic regression における多様性 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\section{執筆時の注意}
+
+本文では「提案法が常に最良である」とは書かない．
+今回の結果では，高突然変異固定率が final \(\HV\) 平均で最良であるため，
+主張は「標準固定率に対する改善」「閉ループ制御としての定式化」「安定性の可能性」
+を中心に置く．
+その上で，強い固定率 baseline を超えるには，報酬設計，\(k\) の候補比較，
+warm-up，非文脈 BO との比較が次の課題であると述べる．
+この書き方であれば，結果を正直に扱いつつ，研究の新規性と次段階の価値を明確に示せる．
+
+\begin{thebibliography}{11}
+
+\bibitem{mcdermott2012}
+J. McDermott et al.,
+``Genetic Programming Needs Better Benchmarks,''
+GECCO, 2012.
+
+\bibitem{white2013}
+D. R. White et al.,
+``Better GP Benchmarks: Community Survey Results and Proposals,''
+Genetic Programming and Evolvable Machines, 2013.
+
+\bibitem{lacava2021}
+W. La Cava et al.,
+``Contemporary Symbolic Regression Methods and their Relative Performance,''
+NeurIPS Datasets and Benchmarks, 2021.
+
+\bibitem{liu2022}
+D. Liu, M. Virgolin, T. Alderliesten, and P. A. N. Bosman,
+``Evolvability Degeneration in Multi-Objective Genetic Programming for Symbolic Regression,''
+GECCO, 2022.
+
+\bibitem{verma2021}
+S. Verma, M. Pant, and V. Snasel,
+``A Comprehensive Review on NSGA-II for Multi-Objective Combinatorial Optimization Problems,''
+IEEE Access, 2021.
+
+\bibitem{krause2011}
+A. Krause and C. S. Ong,
+``Contextual Gaussian Process Bandit Optimization,''
+NeurIPS, 2011.
+
+\bibitem{jones1998}
+D. R. Jones, M. Schonlau, and W. J. Welch,
+``Efficient Global Optimization of Expensive Black-Box Functions,''
+Journal of Global Optimization, 1998.
+
+\bibitem{garrido2020}
+E. C. Garrido-Merchan and D. Hernandez-Lobato,
+``Dealing with Categorical and Integer-Valued Variables in Bayesian Optimization with Gaussian Processes,''
+Neurocomputing, 2020.
+
+\bibitem{li2019}
+M. Li and X. Yao,
+``Quality Evaluation of Solution Sets in Multiobjective Optimisation: A Survey,''
+ACM Computing Surveys, 2019.
+
+\bibitem{guerreiro2021}
+A. P. Guerreiro, C. M. Fonseca, and L. Paquete,
+``The Hypervolume Indicator: Computational Problems and Algorithms,''
+ACM Computing Surveys, 2021.
+
+\bibitem{burlacu2024}
+B. Burlacu, G. Yang, and M. Affenzeller,
+``Population Diversity and Inheritance in Genetic Programming for Symbolic Regression,''
+Natural Computing, 2024.
+
+\end{thebibliography}
+
+\end{document}

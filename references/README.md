@@ -1,7 +1,7 @@
 # 文献フォルダ
 
 - 作成日: 2026-04-14
-- 更新日: 2026-04-22
+- 更新日: 2026-09-03
 - 目的: 文脈付き BO による GP 操作率制御の研究に使う文献を、本文確認、保存、研究ノート反映まで一貫管理する
 - 詳細仕様: [reference_workflow_spec.md](reference_workflow_spec.md)
 
@@ -47,6 +47,25 @@
 | [R09] | C | Deb et al. (2002) | [A fast and elitist multi-objective genetic algorithm - NSGA-II.md](A%20fast%20and%20elitist%20multi-objective%20genetic%20algorithm%20-%20NSGA-II.md) | メタデータ確認 | crowding distance、目的空間多様性 |
 | [R10] | B | Dou, Rockett (2018) | [Comparison of semantic-based local search methods for multiobjective genetic programming.md](Comparison%20of%20semantic-based%20local%20search%20methods%20for%20multiobjective%20genetic%20programming.md) | PDF 保存済み | 多目的 GP、tree size と精度 |
 | [R11] | D | Krawiec (2014) | [Genetic programming - where meaning emerges from program code.md](Genetic%20programming%20-%20where%20meaning%20emerges%20from%20program%20code.md) | PDF 保存済み | semantics の背景 |
+| [R12] | A/B | Krause, Ong (2011) | [Contextual Gaussian Process Bandit Optimization.md](Contextual%20Gaussian%20Process%20Bandit%20Optimization.md) | 公式ページ / PDF 確認 | 文脈付き BO、状態条件付き行動選択 |
+| [R13] | A/B | Jones, Schonlau, Welch (1998) | [Efficient Global Optimization of Expensive Black-Box Functions.md](Efficient%20Global%20Optimization%20of%20Expensive%20Black-Box%20Functions.md) | PDF 保存済み / 本文確認済み | EI / EGO、black-box BO、space-filling 初期設計の根拠 |
+| [R14] | B/C | Garrido-Merchan, Hernandez-Lobato (2020) | [Dealing with categorical and integer-valued variables in Bayesian Optimization with Gaussian processes.md](Dealing%20with%20categorical%20and%20integer-valued%20variables%20in%20Bayesian%20Optimization%20with%20Gaussian%20processes.md) | PDF 保存済み / 本文確認済み | `k` の離散変数扱い、混合空間 BO、整数・カテゴリ変数の注意点 |
+| [R15] | C/D | Audet et al. (2021) | [Performance indicators in multiobjective optimization.md](Performance%20indicators%20in%20multiobjective%20optimization.md) | ScienceDirect メタデータ確認 / 手動取得候補 | Pareto front 近似の性能指標分類 |
+| [R16] | C | Li, Yao (2019) | [Quality evaluation of solution sets in multiobjective optimisation - a survey.md](Quality%20evaluation%20of%20solution%20sets%20in%20multiobjective%20optimisation%20-%20a%20survey.md) | 機関ページ / accepted manuscript 確認 | 解集合品質評価、指標選定 |
+| [R17] | B/C | Guerreiro, Fonseca, Paquete (2021) | [The Hypervolume Indicator - Computational Problems and Algorithms.md](The%20Hypervolume%20Indicator%20-%20Computational%20Problems%20and%20Algorithms.md) | arXiv / DBLP / DOI 確認 | HV 計算、参照点、archive 評価 |
+| [R18] | B/C | Galvan et al. (2022) | [Semantics in Multi-objective Genetic Programming.md](Semantics%20in%20Multi-objective%20Genetic%20Programming.md) | ScienceDirect メタデータ確認 / 手動取得候補 | MOGP における HV と統計的評価の実例 |
+| [R19] | C | Li, Chen, Yao (2022) | [How to evaluate solutions in Pareto-based search-based software engineering.md](How%20to%20evaluate%20solutions%20in%20Pareto-based%20search-based%20software%20engineering.md) | OA PDF / arXiv / 機関ページ確認 | Pareto 解集合評価の方法論、指標利用上の注意 |
+| [R20] | C/D | Verma, Pant, Snasel (2021) | [A Comprehensive Review on NSGA-II for Multi-Objective Combinatorial Optimization Problems.md](A%20Comprehensive%20Review%20on%20NSGA-II%20for%20Multi-Objective%20Combinatorial%20Optimization%20Problems.md) | PDF 保存済み / CiNii・DOI・機関リポジトリ確認 | NSGA-II の総説、応用範囲、評価方法、原典 [R09] の補強 |
+| [R21] | A | Eiben, Hinterding, Michalewicz (1999) | [Parameter control in evolutionary algorithms.md](Parameter%20control%20in%20evolutionary%20algorithms.md) | PDF 保存済み / CiNii・DOI・大学PDF確認 | 固定率と実行中パラメータ制御の区別、parameter control の古典的分類 |
+| [R22] | A/D | Karafotias, Hoogendoorn, Eiben (2015) | [Parameter Control in Evolutionary Algorithms - Trends and Challenges.md](Parameter%20Control%20in%20Evolutionary%20Algorithms%20-%20Trends%20and%20Challenges.md) | PDF 保存済み / 本文確認済み | parameter control の近年動向、探索段階に応じた値変更の根拠 |
+| [R23] | A/D | Aleti, Moser (2016) | [A systematic literature review of adaptive parameter control methods for evolutionary algorithms.md](A%20systematic%20literature%20review%20of%20adaptive%20parameter%20control%20methods%20for%20evolutionary%20algorithms.md) | PDF 保存済み / 本文確認済み | adaptive parameter control の体系的レビュー、フィードバックに基づく動的調整 |
+| [R24] | A/B | Niehaus, Banzhaf (2001) | [Adaption of Operator Probabilities in Genetic Programming.md](Adaption%20of%20Operator%20Probabilities%20in%20Genetic%20Programming.md) | PDF 保存済み / pp.325-336 本文確認済み | GP における演算子確率適応、自由パラメータ削減の直接先行研究 |
+| [R25] | B/D | Oh, Suh, Ahn (2021) | [Self-Adaptive Genetic Programming for Manufacturing Big Data Analysis.md](Self-Adaptive%20Genetic%20Programming%20for%20Manufacturing%20Big%20Data%20Analysis.md) | PDF 保存済み / MDPI・機関リポジトリ確認 | GP の交叉・突然変異確率を木構造複雑さに応じて調整する実例 |
+| [R26] | C/D | Friedman (1991) | [Multivariate Adaptive Regression Splines.md](Multivariate%20Adaptive%20Regression%20Splines.md) | PDF 保存済み / CiNii・Project Euclid メタデータ確認 | Friedman 系合成回帰問題の原典、非線形回帰 benchmark の背景 |
+| [R27] | C/D | Breiman (1996) | [Bagging Predictors.md](Bagging%20Predictors.md) | PDF 保存済み / Springer・CiNii メタデータ確認 | Friedman #1 を標準 ML benchmark として使う補助文献 |
+| [R28] | C/D | Harrison, Alderliesten, Bosman (2025) | [A Better Multi-Objective GP-GOMEA - But do we Need it.md](A%20Better%20Multi-Objective%20GP-GOMEA%20-%20But%20do%20we%20Need%20it.md) | OA PDF 保存済み / arXiv・ACM DOI 確認 | MOGP / GP-GOMEA における平均HVの世代・時間方向評価、HV推移による収束性議論の近接事例 |
+| [R29] | C/D | White et al. (2013) | [Better GP Benchmarks - Community Survey Results and Proposals.md](Better%20GP%20Benchmarks%20-%20Community%20Survey%20Results%20and%20Proposals.md) | 著者・community版PDF保存済み / Springer DOI・本文確認 | 易しすぎるGP問題を避け、Vladislavleva-4、Korns-12等の再現可能で頑健な問題を選ぶ根拠 |
+| [R30] | A/B/C | Liu, Virgolin, Alderliesten, Bosman (2022) | [Evolvability Degeneration in Multi-Objective Genetic Programming for Symbolic Regression.md](Evolvability%20Degeneration%20in%20Multi-Objective%20Genetic%20Programming%20for%20Symbolic%20Regression.md) | OA PDF保存済み / ACM DOI・arXiv・TU Delft・本文確認 | accuracy--size MOGPにおける小木の過剰複製、evolvability低下、Airfoil等の問題設定 |
 
 ## 新規追加時のチェックリスト
 

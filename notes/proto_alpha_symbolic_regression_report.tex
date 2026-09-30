@@ -1,0 +1,462 @@
+% !TEX program = lualatex
+\documentclass[a4paper,11pt]{ltjsarticle}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\geometry{margin=24mm}
+
+\title{proto\_\(\alpha\) 実験レポート\\2目的シンボリック回帰に対する BO 制御 GP の予備評価}
+\author{}
+\date{2026年5月29日}
+
+\newcommand{\HV}{\mathrm{HV}}
+\newcommand{\NRMSE}{\mathrm{NRMSE}}
+\newcommand{\BO}{\mathrm{BO}}
+\newcommand{\GP}{\mathrm{GP}}
+
+\begin{document}
+\maketitle
+
+\section{本レポートの目的}
+
+本レポートは，本研究における本実験候補問題として実装した
+2目的シンボリック回帰問題 \(\mathrm{proto}\_\alpha\) の設定と，
+その初回 pilot 実験結果を整理するものである．
+本研究の提案手法は，多目的 GP の世代状態を観測し，
+文脈付き BO によって交叉率 \(p_c\)，突然変異率 \(p_m\)，更新周期 \(k\) を逐次決定する
+状態依存・閉ループ制御である．
+
+今回の目的は，最終的な統計的結論を出すことではなく，
+次の 3 点を確認することである．
+
+\begin{enumerate}
+  \item accuracy--complexity 型の 2目的シンボリック回帰が，本研究の実験問題として使えるか．
+  \item 提案手法である BO 制御 GP が，固定率の普通 GP と比較してどのような挙動を示すか．
+  \item Friedman-I と Poly-10 のどちらが，提案手法の有効性を見る問題として適していそうか．
+\end{enumerate}
+
+\section{対象問題}
+
+\subsection{2目的シンボリック回帰としての定義}
+
+個体 \(T\) は数式木であり，入力変数，定数，演算子ノードから構成される．
+今回の \(\mathrm{proto}\_\alpha\) では，シンボリック回帰を次の 2目的最小化問題として定義した．
+
+\[
+  \min_T \quad
+  \left(
+    f_1(T), f_2(T)
+  \right)
+  =
+  \left(
+    \NRMSE_{\mathrm{train}}(T), |T|
+  \right).
+\]
+
+第1目的は，training set 上の正規化 RMSE である．
+
+\[
+  \mathrm{RMSE}_{\mathrm{train}}(T)
+  =
+  \sqrt{
+    \frac{1}{n_{\mathrm{train}}}
+    \sum_{i=1}^{n_{\mathrm{train}}}
+    \left(T(\bm{x}_i)-y_i\right)^2
+  },
+\]
+
+\[
+  f_1(T)
+  =
+  \NRMSE_{\mathrm{train}}(T)
+  =
+  \frac{
+    \mathrm{RMSE}_{\mathrm{train}}(T)
+  }{
+    \mathrm{std}(\bm{y}_{\mathrm{train}})+\varepsilon
+  }.
+\]
+
+第2目的は，数式木のノード数である．
+
+\[
+  f_2(T)=|T|.
+\]
+
+ここで \(|T|\) は，演算子ノード，変数ノード，定数ノードをすべて含めた総ノード数である．
+したがって，本問題では「予測誤差が小さい式」と「構造が単純な式」の
+トレードオフを Pareto front として探索する．
+
+\subsection{関数集合と終端集合}
+
+今回の関数集合は次の通りである．
+
+\[
+  \mathcal{F}
+  =
+  \{+, -, \times, \mathrm{protected\_div}, \sin, \cos\}.
+\]
+
+終端集合は，入力変数と ephemeral constants である．
+定数は初期生成時に一様分布 \(\mathrm{Uniform}(-2,2)\) からサンプリングされる．
+除算は数値発散を避けるため，protected division として実装した．
+
+\[
+\mathrm{protected\_div}(a,b)
+=
+\begin{cases}
+  a/b & (|b|>\varepsilon),\\
+  a   & (|b|\leq \varepsilon).
+\end{cases}
+\]
+
+\subsection{HV の正規化設定}
+
+\(\HV\) は 2目的の exact hypervolume として計算した．
+目的値は `ObjectiveSpec` の上下限に基づいて正規化される．
+今回の設定では，第1目的の上限を
+\[
+  E_{\max}=5.0
+\]
+とした．
+初回実行では \(E_{\max}=1.0\) としていたが，多くの個体が上限に張り付き，
+\(\HV\) が 0 に潰れたため，\(\mathrm{proto}\_\alpha\) では \(E_{\max}=5.0\) に修正した．
+木サイズの上限は
+\[
+  L_{\max}=100
+\]
+である．
+
+\section{対象とした benchmark}
+
+\subsection{Friedman-I}
+
+Friedman-I は，5 変数の非線形回帰 benchmark である．
+今回の設定では，入力を \(x_j \sim \mathrm{Uniform}(0,1)\) とし，
+目標関数を次で定義した．
+
+\[
+y =
+10\sin(\pi x_1 x_2)
++20(x_3-0.5)^2
++10x_4
++5x_5.
+\]
+
+Friedman-I は，三角関数，二次項，線形項，変数間相互作用を含むため，
+単純すぎない一方で，問題構造を説明しやすい．
+そのため，最初の本実験候補として扱いやすい問題である．
+
+\subsection{Poly-10}
+
+Poly-10 は，10 変数の sparse interaction 型の回帰問題である．
+目標関数は次である．
+
+\[
+y =
+x_1x_2
++x_3x_4
++x_5x_6
++x_1x_7x_9
++x_3x_6x_{10}.
+\]
+
+Poly-10 では，10 個の変数のうち，特定の組み合わせだけが出力に関与する．
+そのため，必要な変数と相互作用を探索する必要があり，
+多様性維持や木サイズ制御が重要になると期待した．
+
+\section{実験条件}
+
+比較した手法は次の 2 つである．
+
+\begin{itemize}
+  \item \textbf{plain\_fixed}: 固定率の普通 GP．交叉率 \(p_c=0.80\)，突然変異率 \(p_m=0.05\)．
+  \item \textbf{bogp\_current}: 現行の提案手法．文脈付き BO により \(p_c,p_m,k\) を逐次決定する．
+\end{itemize}
+
+実験条件を表 \ref{tab:conditions} に示す．
+
+\begin{table}[htbp]
+\centering
+\caption{proto\_\(\alpha\) pilot 実験条件}
+\label{tab:conditions}
+\begin{tabular}{ll}
+\toprule
+項目 & 設定 \\
+\midrule
+対象問題 & Friedman-I, Poly-10 \\
+目的関数 & train NRMSE, tree size \\
+seed & 0, 1, 2 \\
+population size & 24 \\
+total generations & 30 \\
+評価回数 / run & 720 \\
+archive key & topology + node value \\
+誤差上限 \(E_{\max}\) & 5.0 \\
+木サイズ上限 \(L_{\max}\) & 100 \\
+関数集合 & \(+, -, \times, \mathrm{protected\_div}, \sin, \cos\) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{結果}
+
+\subsection{最終指標}
+
+表 \ref{tab:final_results} に，3 seed の平均値を示す．
+
+\begin{table}[htbp]
+\centering
+\caption{proto\_\(\alpha\) pilot 実験の最終結果}
+\label{tab:final_results}
+\begin{tabular}{lllll}
+\toprule
+問題 & 手法 & 最終 archive HV & 最終 Diversity & archive size \\
+\midrule
+Friedman-I & bogp\_current & 0.78495 & 0.66576 & 17.67 \\
+Friedman-I & plain\_fixed & 0.68354 & 0.68812 & 31.67 \\
+Poly-10 & bogp\_current & 0.79946 & 0.56956 & 4.00 \\
+Poly-10 & plain\_fixed & 0.79980 & 0.59739 & 5.33 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Friedman-I では，BO 制御 GP の平均最終 HV が 0.78495，
+普通 GP が 0.68354 であり，BO 制御 GP が高い値を示した．
+一方で Poly-10 では，両手法の HV がほぼ同程度であった．
+以降の履歴図では，各線が 1 回の試行に対応し，
+凡例には手法名と seed 番号を併記する．
+そのため，同じ手法内での seed 間のばらつきと，
+手法間の傾向の違いを同時に確認できる．
+
+\subsection{Friedman-I の HV 推移}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.90\linewidth]{outputs/symbolic_regression_alpha/sr_alpha_friedman/ver_alpha_20260528_205110/hv_progress.png}
+\caption{Friedman-I における archive HV の推移}
+\label{fig:friedman_hv}
+\end{figure}
+
+図 \ref{fig:friedman_hv} は，Friedman-I における archive HV の世代推移である．
+BO 制御 GP は序盤から普通 GP より高い HV を示している．
+平均値で見ると，世代 5 では BO 制御 GP が 0.56068，
+普通 GP が 0.46442 であり，すでに差が出ている．
+世代 15 では 0.71978 対 0.63791，
+最終世代では 0.78495 対 0.68354 であった．
+
+このことから，Friedman-I では，BO 制御 GP がより早く
+accuracy--complexity trade-off を改善できた可能性がある．
+また，BO 制御 GP の最終 HV の標準偏差は 0.01208 であり，
+普通 GP の 0.10262 より小さい．
+この点は，今回の小規模 pilot の範囲では，BO 制御 GP が比較的安定していたことを示している．
+
+\subsection{Friedman-I の Diversity 推移}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.90\linewidth]{outputs/symbolic_regression_alpha/sr_alpha_friedman/ver_alpha_20260528_205110/diversity_progress.png}
+\caption{Friedman-I における population diversity の推移}
+\label{fig:friedman_div}
+\end{figure}
+
+図 \ref{fig:friedman_div} は，Friedman-I における現在集団の構造多様性である．
+最終 Diversity は普通 GP が 0.68812，BO 制御 GP が 0.66576 であり，
+大きな差は見られなかった．
+したがって，Friedman-I で観測された BO 制御 GP の HV 改善は，
+単に多様性を極端に犠牲にした結果ではないと考えられる．
+
+ただし，Diversity は世代途中で上下しており，
+BO 制御 GP が常に多様性を高く保っていたわけではない．
+今回の結果からは，「必要な多様性をある程度残しながら，
+HV 改善に寄与する探索を進めた」と解釈するのが自然である．
+
+\subsection{Friedman-I の archive size 推移}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.90\linewidth]{outputs/symbolic_regression_alpha/sr_alpha_friedman/ver_alpha_20260528_205110/archive_size_progress.png}
+\caption{Friedman-I における archive size の推移}
+\label{fig:friedman_archive}
+\end{figure}
+
+図 \ref{fig:friedman_archive} は archive size の推移である．
+普通 GP は最終 archive size が平均 31.67，
+BO 制御 GP は 17.67 であった．
+一見すると普通 GP の方が多くの archive 解を得ているように見える．
+しかし，普通 GP の方が HV は低いため，
+「archive に保存された解の数が多いこと」と
+「Pareto front として質が高いこと」は同じではない．
+
+この結果は，BO 制御 GP が比較的少ない archive 解で
+より高い HV を得ている可能性を示している．
+つまり，得られた解集合の量よりも，
+目的空間上で有効な trade-off を押し広げる質が重要である．
+
+\subsection{Poly-10 の HV 推移}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.90\linewidth]{outputs/symbolic_regression_alpha/sr_alpha_poly10/ver_alpha_20260528_205110/hv_progress.png}
+\caption{Poly-10 における archive HV の推移}
+\label{fig:poly_hv}
+\end{figure}
+
+図 \ref{fig:poly_hv} は Poly-10 の HV 推移である．
+Poly-10 では初期世代から HV が約 0.795 と高く，
+その後の改善量は非常に小さい．
+最終 HV は BO 制御 GP が 0.79946，
+普通 GP が 0.79980 であり，ほぼ同程度であった．
+
+これは，現行設定では Poly-10 が提案手法の差を観察する問題として弱い可能性を示している．
+問題自体が簡単というより，今回の正規化設定や評価上限により，
+初期段階から HV が高く見えやすい可能性がある．
+
+\subsection{Poly-10 の Diversity 推移}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.90\linewidth]{outputs/symbolic_regression_alpha/sr_alpha_poly10/ver_alpha_20260528_205110/diversity_progress.png}
+\caption{Poly-10 における population diversity の推移}
+\label{fig:poly_div}
+\end{figure}
+
+図 \ref{fig:poly_div} は Poly-10 の Diversity 推移である．
+最終 Diversity は BO 制御 GP が 0.56956，
+普通 GP が 0.59739 であり，こちらも大きな差ではない．
+HV もほぼ同程度であるため，現行設定の Poly-10 からは，
+提案手法の有効性について強い結論は出せない．
+
+\subsection{最終 Pareto front の例}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.74\linewidth]{outputs/symbolic_regression_alpha/sr_alpha_friedman/ver_alpha_20260528_205110/pareto_front_seed_0.png}
+\caption{Friedman-I の最終 Pareto archive 例（seed 0）}
+\label{fig:friedman_pareto}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.74\linewidth]{outputs/symbolic_regression_alpha/sr_alpha_poly10/ver_alpha_20260528_205110/pareto_front_seed_0.png}
+\caption{Poly-10 の最終 Pareto archive 例（seed 0）}
+\label{fig:poly_pareto}
+\end{figure}
+
+図 \ref{fig:friedman_pareto} と図 \ref{fig:poly_pareto} は，
+seed 0 における最終 Pareto archive の例である．
+横軸は第1目的である train NRMSE，
+縦軸は第2目的である tree size に対応する．
+左下に近いほど，低誤差かつ小さい式であり望ましい．
+
+Friedman-I では，BO 制御 GP の archive がより良い目的空間領域に到達している様子が見られる．
+一方 Poly-10 では，両手法の差が小さく，
+問題設定または正規化の見直しが必要である．
+
+\section{今回の結果から分かること}
+
+\subsection{Friedman-I は本実験候補として有望である}
+
+今回の pilot では，Friedman-I において BO 制御 GP が普通 GP より高い HV を示した．
+また，BO 制御 GP の seed 間ばらつきは小さく，
+少なくとも今回の小規模条件では安定して良い Pareto archive を得られている．
+
+Friedman-I は，三角関数，二次項，線形項，変数間相互作用が混在しており，
+探索の進み方によって有効な操作率が変わりやすいと考えられる．
+そのため，状態依存に \(p_c,p_m,k\) を制御する提案手法の効果を観察しやすい問題である可能性がある．
+
+\subsection{archive size だけでは性能を判断できない}
+
+Friedman-I では，普通 GP の方が archive size は大きかったが，
+HV は BO 制御 GP の方が高かった．
+このことは，archive に多くの解が保存されていることが，
+必ずしも良い Pareto front を得ていることを意味しないことを示している．
+
+本研究では，archive size，unique objective size，unique structure size も重要であるが，
+最終的な成果評価では HV や Pareto front の位置を中心に見る必要がある．
+
+\subsection{Poly-10 は現行設定では飽和気味である}
+
+Poly-10 では，初期段階から HV が高く，
+30 世代の間で大きな改善が見られなかった．
+このため，現行設定では BO 制御の効果を見せる問題としては弱い．
+
+考えられる理由は次の通りである．
+
+\begin{itemize}
+  \item \(E_{\max}=5.0\) にしたことで，誤差目的の正規化が緩くなり，そこそこの個体でも高い HV を得やすい．
+  \item tree size の上限 \(L_{\max}=100\) が大きく，サイズ目的でも広い範囲が許容されている．
+  \item Poly-10 の出力スケールや NRMSE の分布に対して，現在の HV 正規化が粗い可能性がある．
+  \item 30 世代・population 24 の範囲では，両手法が似たような単純解に到達している可能性がある．
+\end{itemize}
+
+\section{考察}
+
+\subsection{提案手法にとって良い問題とは何か}
+
+今回の結果から，提案手法の有効性を見るためには，
+単に多目的問題であればよいわけではなく，
+次の性質を持つ問題が望ましいと考えられる．
+
+\begin{enumerate}
+  \item 初期世代で HV がすぐ飽和しない．
+  \item 精度改善と木サイズ削減の trade-off が明確に出る．
+  \item 多様性低下や停滞が発生し，制御入力を変える意味がある．
+  \item 固定率 GP では seed によって結果がばらつきやすい．
+  \item Pareto front の図で違いを説明しやすい．
+\end{enumerate}
+
+Friedman-I はこれらの条件を比較的満たしている．
+一方，Poly-10 は今回の設定では HV が飽和しやすく，
+提案手法の差を見せるには調整が必要である．
+
+\subsection{今回の BO 制御 GP の解釈}
+
+Friedman-I では，BO 制御 GP が早い世代から HV を伸ばしている．
+これは，文脈付き BO が観測した状態に応じて
+探索寄り・収束寄りの操作を切り替えた可能性を示す．
+ただし，今回の段階では BO 制御器内部の \(k\) warm-up や EI 比較方法はまだ調整していない．
+したがって，今回の結果は「提案手法が有望であることを示す予備結果」であり，
+最終的な有効性の証明ではない．
+
+\subsection{注意点}
+
+今回の実験には次の制約がある．
+
+\begin{itemize}
+  \item seed 数が 3 であり，統計的結論を出すには少ない．
+  \item BO 制御器の warm-up と EI 比較方法は未調整である．
+  \item Poly-10 では HV 正規化が問題の難しさを十分に反映していない可能性がある．
+  \item test NRMSE は問題側に実装済みだが，今回の summary にはまだ保存していない．
+  \item BO の GaussianProcessRegressor で ConvergenceWarning が出ており，今後 kernel bound や warning 抑制を検討する必要がある．
+\end{itemize}
+
+\section{次に行うべきこと}
+
+今回の結果を踏まえると，次の作業が必要である．
+
+\begin{enumerate}
+  \item Friedman-I を \(\mathrm{proto}\_\alpha\) の主候補として残し，seed 数を増やして再評価する．
+  \item Poly-10 は誤差上限 \(E_{\max}\)，木サイズ上限 \(L_{\max}\)，データ点数，世代数を調整し，HV が序盤で飽和しない設定を探す．
+  \item summary に train NRMSE，test NRMSE，tree size の代表値を保存できるようにする．
+  \item BO 制御履歴 \(p_c,p_m,k\) と HV/Diversity の関係を問題ごとに詳しく見る．
+  \item BO 制御器の \(k\) warm-up と EI 比較方法を次段階で調整する．
+  \item 予備実験では 5 seed，本実験では 20--30 seed 程度へ拡張する．
+\end{enumerate}
+
+\section{まとめ}
+
+\(\mathrm{proto}\_\alpha\) として実装した 2目的シンボリック回帰問題は，
+本研究の提案手法を評価するための初期実験基盤として有用である．
+特に Friedman-I では，BO 制御 GP が固定率 GP より高い HV を示し，
+状態依存制御の効果が現れる可能性が確認できた．
+
+一方で，Poly-10 は現行設定では HV が早期に高くなりすぎ，
+手法差を観察するには不十分であった．
+したがって，今後は Friedman-I を主候補として深掘りしつつ，
+Poly-10 の難易度と正規化設定を調整する方針が妥当である．
+
+\end{document}

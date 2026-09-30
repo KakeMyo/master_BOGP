@@ -1,0 +1,32 @@
+# Adaption of Operator Probabilities in Genetic Programming
+
+- Reference ID: [R24]
+- Status: Adopted
+- Category: A/B
+- Citation: Niehaus, J., & Banzhaf, W. (2001). *Adaption of Operator Probabilities in Genetic Programming*. In J. F. Miller et al. (Eds.), Genetic Programming, Proceedings of EuroGP 2001, LNCS 2038, 325-336. Springer. https://doi.org/10.1007/3-540-45355-5_26
+- DOI: 10.1007/3-540-45355-5_26
+- URL: https://gpbib.cs.ucl.ac.uk/gp-html/niehaus_2001_EuroGP.html
+- Elsevier URL:
+- Source checked:
+  - GP bibliography entry
+  - Springer DOI metadata
+  - CiteSeerX full-text preview discovered, but direct PDF download failed
+  - User-provided Springer/LNCS PDF, target paper pp. 325-336 checked
+- Access: PDF saved / target pages checked
+- Local PDF: `references/Adaption of Operator Probabilities in Genetic Programming.pdf`
+- Citation signal:
+  - EuroGP 2001 LNCS paper
+  - Directly about adaptive operator probabilities in GP
+- Why this paper matters:
+  - It directly studies adapting probabilities of genetic operators in GP.
+  - It aims to reduce the number of free GP parameters while maintaining solution quality.
+  - It reports experiments on symbolic regression and classification, which makes it close to the present study's problem setting.
+- Information used in this project:
+  - Supports the claim that GP has many free parameters and that operator probabilities can be adapted rather than fixed.
+  - Provides a direct GP-specific precedent for adapting operator probabilities.
+  - Helps distinguish the proposed method: this study adapts operator probabilities, while the present work uses contextual BO and also controls the update period `k`.
+- Related note sections:
+  - `notes/paper_8page_2col_draft_expanded.tex` section 1, introduction
+  - `notes/research_note.md` reference section
+- Next action:
+  - Use as a GP-specific reference for adaptive operator probabilities, while noting that the method is not Bayesian optimization and is not multi-objective.
