@@ -1,0 +1,9 @@
+Genetic programming is sensitive to the choice of operator parameters such
+as crossover and mutation rates. In many practical settings these values
+are fixed before the run, even though the desirable balance between
+exploration and exploitation can change across evolutionary stages.
+
+This project investigates a state-dependent control framework in which the
+current search state is observed and a Bayesian optimization controller
+updates the operator rates online. The goal is to move from static
+parameter tuning to adaptive control of the evolutionary process.

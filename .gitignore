@@ -1,5 +1,6 @@
 .DS_Store
 .venv/
+.pycache_tmp/
 __pycache__/
 .pytest_cache/
 *.pyc
@@ -9,4 +10,23 @@ __pycache__/
 build/
 dist/
 results/
+outputs/
 slides/
+.TinyTeX/
+
+# Local credentials and machine-specific environment files
+.env
+.env.*
+!.env.example
+
+# Temporary working files
+tmp/
+~$*
+
+# LaTeX build products (keep source .tex and final .pdf files)
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz

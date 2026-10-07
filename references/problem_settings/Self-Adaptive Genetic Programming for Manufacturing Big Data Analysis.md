@@ -1,0 +1,34 @@
+# Self-Adaptive Genetic Programming for Manufacturing Big Data Analysis
+
+- Reference ID: [R25]
+- Status: Adopted
+- Category: B/D
+- Citation: Oh, S., Suh, W.-H., & Ahn, C.-W. (2021). *Self-Adaptive Genetic Programming for Manufacturing Big Data Analysis*. Symmetry, 13(4), 709. https://doi.org/10.3390/sym13040709
+- DOI: 10.3390/sym13040709
+- URL: https://www.mdpi.com/2073-8994/13/4/709
+- Elsevier URL:
+- Source checked:
+  - MDPI article page
+  - GIST institutional repository PDF
+- Access: PDF saved
+- Local PDF: `references/Self-Adaptive Genetic Programming for Manufacturing Big Data Analysis.pdf`
+- Citation signal:
+  - Open access journal article
+  - Directly uses self-adaptive crossover and mutation probabilities in GP
+- Why this paper matters:
+  - It is a recent GP-specific example of managing crossover and mutation probabilities during evolution.
+  - It links operator probabilities with the complexity of tree-structured GP solutions.
+  - It motivates the idea that GP operator probabilities can be part of a mechanism balancing accuracy and interpretability or complexity.
+- Information used in this project:
+  - Supports the introduction's statement that crossover and mutation probabilities affect the balance between accuracy, complexity, and search behavior.
+  - Supports using mean tree size or complexity-related state variables when controlling GP operators.
+  - Provides a practical precedent for changing GP operator probabilities during a run.
+- Related note sections:
+  - `notes/paper_8page_2col_draft_expanded.tex` section 1, introduction
+  - `notes/research_note.md` reference section
+- Manual download queries:
+  - Complete title: `Self-Adaptive Genetic Programming for Manufacturing Big Data Analysis`
+  - Author year query: `Oh Suh Ahn 2021 Self-Adaptive Genetic Programming for Manufacturing Big Data Analysis`
+  - DOI: `10.3390/sym13040709`
+- Next action:
+  - Use as a GP-specific supporting citation for runtime adjustment of crossover and mutation probabilities.

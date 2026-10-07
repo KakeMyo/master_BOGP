@@ -1,0 +1,32 @@
+# A Comprehensive Review on NSGA-II for Multi-Objective Combinatorial Optimization Problems
+
+- Reference ID: [R20]
+- Status: Adopted
+- Category: C/D
+- Citation: Verma, S., Pant, M., & Snasel, V. (2021). *A Comprehensive Review on NSGA-II for Multi-Objective Combinatorial Optimization Problems*. IEEE Access, 9, 57757-57791. https://doi.org/10.1109/ACCESS.2021.3070634
+- DOI: 10.1109/ACCESS.2021.3070634
+- URL: https://doi.org/10.1109/ACCESS.2021.3070634
+- CiNii URL: https://cir.nii.ac.jp/crid/1360580236824196864
+- Repository URL: https://dspace.vsb.cz/handle/10084/143118
+- Source checked: attached PDF, CiNii Research metadata, DOI metadata, and VSB institutional repository metadata.
+- Access: PDF saved locally
+- Local PDF: references/A Comprehensive Review on NSGA-II for Multi-Objective Combinatorial Optimization Problems.pdf
+- Citation signal: not recorded in the project note; the paper is a DOI-identified IEEE Access review article.
+- Why this paper matters:
+  - Provides a recent review of NSGA-II usage for multi-objective combinatorial optimization problems.
+  - Summarizes conventional NSGA-II, modified NSGA-II, and hybrid NSGA-II variants.
+  - Discusses evaluation practices such as test instances, performance metrics, statistical tests, case studies, and benchmarking with other algorithms.
+  - Reinforces the methodological background for using NSGA-II-style non-dominated sorting and diversity-preserving selection in this project.
+- Information used in this project:
+  - NSGA-II is a standard multi-objective evolutionary algorithm and is widely used as a baseline or internal selection mechanism.
+  - The project can cite this review when explaining the broader role and application range of NSGA-II.
+  - For the original proposal and exact algorithmic source, Deb et al. (2002) [R09] should remain the canonical primary reference.
+- Related note sections:
+  - notes/research_note.md 10.2
+  - Paper background / related work section on NSGA-II and multi-objective evolutionary algorithms
+  - Experimental method section explaining NSGA-II-style non-dominated sorting and crowding-based selection
+- Adoption decision:
+  - Adopt as the official reference to use in the planned paper's [5] slot for the NSGA-II overview and evaluation-background explanation.
+  - If the text specifically claims the original NSGA-II algorithm or exact original definitions, cite Deb et al. (2002) [R09] together with this review.
+- Next action:
+  - In the paper draft, use this review [R20] as [5] for general NSGA-II background, and add Deb et al. (2002) [R09] only where the original proposal must be cited explicitly.

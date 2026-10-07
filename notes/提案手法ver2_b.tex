@@ -1,0 +1,384 @@
+% !TEX program = lualatex
+\documentclass[a4paper,11pt]{ltjsarticle}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{tikz}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\geometry{margin=25mm}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc}
+
+\title{提案手法ver2\_b\\archive評価とpopulation状態観測を分離した\\状態依存BO制御型多目的GP}
+\author{}
+\date{2026年5月20日}
+
+\newcommand{\clip}{\mathrm{clip}}
+\newcommand{\HV}{\mathrm{HV}}
+\newcommand{\EI}{\mathrm{EI}}
+\newcommand{\ND}{\mathrm{ND}}
+
+\begin{document}
+\maketitle
+
+\section{ver2\_b の位置づけ}
+
+本研究の提案手法は，多目的遺伝的プログラミング
+(Multi-objective Genetic Programming; MOGP) の世代状態を観測し，
+交叉率 \(p_c\)，突然変異率 \(p_m\)，次回制御更新までの世代数 \(k\) を，
+文脈付きベイズ最適化 (Bayesian Optimization; BO) により逐次決定する
+状態依存・閉ループ制御手法である．
+
+ver2\_b では，提案法の BO 制御則そのものは変更しない．
+一方で，多目的 GP の成果評価と探索状態観測を明確に分離するため，
+現在集団 \(P_g\)，子個体集合 \(Q_g\)，外部 archive \(A_g\) を導入する．
+本版の要点は次の 3 点である．
+
+\begin{enumerate}[leftmargin=3em]
+  \item HV，報酬の進捗項，最終 Pareto front は外部 archive \(A_g\) に基づいて評価する．
+  \item 多様性，平均木サイズなどの探索状態は現在集団 \(P_g\) に基づいて観測する．
+  \item archive の構造重複判定として，トポロジーのみのキーと，トポロジーにノード値を含めるキーを切替可能にする．
+\end{enumerate}
+
+これにより，探索中に一度発見された有用な非劣解を失わずに評価しつつ，
+BO には現在の探索状態を反映した文脈を与えることができる．
+
+\section{閉ループ制御構造}
+
+提案法では，GP 本体をプラント，BO を制御器とみなす．
+制御ステップ \(\ell\) において，BO は現在状態 \(x_\ell\) を入力として受け取り，
+\begin{equation}
+u_\ell=(p_{c,\ell},p_{m,\ell},k_\ell)
+\end{equation}
+を出力する．ここで \(k_\ell\) は次回 BO 更新までの世代数である．
+
+GP の世代番号を \(g\)，BO の制御更新ステップを \(\ell\) とすると，
+\begin{equation}
+g_{\ell+1}=g_\ell+k_\ell
+\end{equation}
+である．制御区間中は \(p_{c,\ell}\) と \(p_{m,\ell}\) を保持し，
+GP を \(k_\ell\) 世代だけ進化させる．
+
+\begin{figure}[htbp]
+\centering
+\resizebox{0.96\linewidth}{!}{%
+\begin{tikzpicture}[
+  node distance=9mm and 14mm,
+  block/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=39mm, minimum height=9mm, fill=blue!6},
+  controller/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=39mm, minimum height=10mm, fill=orange!10},
+  plant/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=42mm, minimum height=11mm, fill=green!9},
+  data/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=42mm, minimum height=9mm, fill=purple!7},
+  arrow/.style={-Latex, thick},
+  labelbox/.style={fill=white, inner sep=1.5pt}
+]
+\node[block] (obs) {状態観測\\ archive HV, population diversity};
+\node[controller, right=29mm of obs] (bo) {文脈付きBO制御器\\ GP surrogate + EI};
+\node[data, below=12mm of bo] (act) {制御入力\\ \(u_\ell=(p_c,p_m,k)\)};
+\node[plant, below=12mm of obs] (plant) {MOGPプラント\\ \(P_g \rightarrow Q_g\)};
+\node[block, below=12mm of plant] (archive) {archive更新\\ \(A_{g+1}=\ND(A_g\cup P_g\cup Q_g)\)};
+\node[data, right=29mm of archive] (reward) {報酬・履歴更新\\ \((x_\ell,u_\ell,r_\ell)\)};
+
+\draw[arrow] (obs.east) -- node[labelbox, above] {文脈 \(x_\ell\)} (bo.west);
+\draw[arrow] (bo.south) -- node[labelbox, right] {EI最大化} (act.north);
+\draw[arrow] (act.west) -| node[labelbox, near start, below] {操作入力} (plant.east);
+\draw[arrow] (plant.south) -- node[labelbox, left] {子個体 \(Q_g\)} (archive.north);
+\draw[arrow] (archive.east) -- node[labelbox, above] {区間統計} (reward.west);
+\draw[arrow] (reward.east) -- ++(12mm,0) |- node[labelbox, pos=0.35, right] {BO更新} (bo.east);
+\draw[arrow] (archive.west) -- ++(-13mm,0) |- node[labelbox, near end, left] {次状態} (obs.west);
+\end{tikzpicture}
+}
+\caption{ver2\_b における archive 評価と population 状態観測を分離した閉ループ構造}
+\label{fig:closed_loop_v2b}
+\end{figure}
+
+\section{現在集団，子個体集合，外部 archive}
+
+世代 \(g\) の現在集団を
+\begin{equation}
+P_g=\{T_1,\dots,T_N\}
+\end{equation}
+とする．交叉，突然変異，複製により生成され，評価された子個体集合を
+\begin{equation}
+Q_g=\{T'_1,\dots,T'_N\}
+\end{equation}
+とする．
+
+NSGA-II 型の生存選択では，
+\begin{equation}
+P_{g+1}
+=
+\mathrm{Select}_{\mathrm{NSGA-II}}(P_g\cup Q_g)
+\end{equation}
+により次世代集団を決める．
+一方，外部 archive は進化操作には戻さず，成果評価と報酬計算のために保持する．
+archive 更新は
+\begin{equation}
+A_{g+1}
+=
+\ND(A_g\cup P_g\cup Q_g)
+\end{equation}
+を基本とする．
+ここで \(\ND(\cdot)\) は非劣解抽出を表す．
+
+この設計により，子個体 \(Q_g\) の中に有用な非劣解が現れた場合，
+たとえ次世代集団 \(P_{g+1}\) に残らなくても，成果集合 \(A_{g+1}\) には保存できる．
+したがって，最終的な Pareto front は，最終世代の集団 \(P_T\) ではなく，
+探索全体で得られた archive \(A_T\) から得る．
+
+\section{状態ベクトル}
+
+BO に渡す文脈ベクトルは，ver1 と同じ 6 変数を基本とする．
+ただし，HV に関する成分は archive ベース，多様性と平均木サイズは population ベースとして明確に分ける．
+\begin{equation}
+x_\ell =
+\left[
+\tau_\ell,\;
+\widetilde{\HV}^{A}_\ell,\;
+\widetilde{\Delta \HV}^{A,\mathrm{rate}}_\ell,\;
+D^{P}_\ell,\;
+\widetilde{L}^{P}_\ell,\;
+\widetilde{s}^{A}_\ell
+\right]^\top .
+\end{equation}
+
+\begin{table}[htbp]
+\centering
+\caption{ver2\_b における状態ベクトルの構成}
+\begin{tabular}{lll}
+\toprule
+記号 & 計算対象 & 意味 \\
+\midrule
+\(\tau_\ell\) & 時間軸 & 世代進行率 \(g_\ell/T\) \\
+\(\widetilde{\HV}^{A}_\ell\) & archive \(A_{g_\ell}\) & 現在までの成果集合の性能 \\
+\(\widetilde{\Delta \HV}^{A,\mathrm{rate}}_\ell\) & archive \(A\) & 直近区間の世代あたり改善量 \\
+\(D^{P}_\ell\) & population \(P_{g_\ell}\) & 現在集団の構造多様性 \\
+\(\widetilde{L}^{P}_\ell\) & population \(P_{g_\ell}\) & 現在集団の平均木サイズ \\
+\(\widetilde{s}^{A}_\ell\) & archive \(A\) & archive HV が改善しない停滞長 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+この分担により，BO は「これまでの成果がどこまで進んだか」と
+「現在の探索集団がどれだけ多様性を保っているか」を同時に観測できる．
+
+\section{報酬関数}
+
+報酬は，進捗，多様性維持，制御コストの 3 要素で構成する．
+進捗項には archive HV の世代あたり改善量を用いる．
+\begin{equation}
+\Delta \HV^{A,\mathrm{rate}}_\ell
+=
+\frac{
+\HV(A_{g_{\ell+1}})-\HV(A_{g_\ell})
+}
+{k_\ell}.
+\end{equation}
+正規化した進捗項は
+\begin{equation}
+\widetilde{\Delta \HV}^{A,\mathrm{rate}}_\ell
+=
+\clip
+\left(
+\frac{\Delta \HV^{A,\mathrm{rate}}_\ell}{\delta_{\HV}^{\mathrm{rate}}},
+-1,1
+\right)
+\end{equation}
+とする．
+
+多様性項は現在集団に基づく区間平均多様性である．
+\begin{equation}
+\bar{D}^{P}_\ell
+=
+\frac{1}{k_\ell}
+\sum_{j=1}^{k_\ell}
+D(P_{g_\ell+j})
+\end{equation}
+を用いる．目標多様性 \(D^\ast(\tau)\) に対する整合度を
+\begin{equation}
+S_D(\bar{D}^{P}_\ell,\tau_{\ell+1})
+=
+\exp
+\left[
+-
+\left(
+\frac{\bar{D}^{P}_\ell-D^\ast(\tau_{\ell+1})}{\sigma_D}
+\right)^2
+\right]
+\end{equation}
+で定義する．
+
+制御コストは
+\begin{equation}
+C_k(k_\ell)
+=
+\frac{k_{\max}-k_\ell}{k_{\max}-k_{\min}}
+\end{equation}
+とし，最終報酬を
+\begin{equation}
+r_\ell
+=
+w_p
+\widetilde{\Delta \HV}^{A,\mathrm{rate}}_\ell
++
+w_d
+S_D(\bar{D}^{P}_\ell,\tau_{\ell+1})
+-
+w_c
+C_k(k_\ell)
+\end{equation}
+とする．
+
+\section{archive における重複除去}
+
+archive \(A_g\) は，目的値と構造キーのペアで重複管理する．
+個体 \(T\) の目的値ベクトルを
+\begin{equation}
+\bm{y}(T)=(y_1(T),\dots,y_M(T))
+\end{equation}
+とし，丸め後の目的値キーを \(\rho(\bm{y}(T))\) とする．
+構造キーを \(\kappa(T)\) とすると，archive 上の同一性キーは
+\begin{equation}
+\psi(T)
+=
+\left(
+\rho(\bm{y}(T)),
+\kappa(T)
+\right)
+\end{equation}
+である．
+
+ver2\_b では，構造キーとして次の 2 種類を切替可能にする．
+
+\subsection{b1: トポロジーのみの構造キー}
+
+test\_ver2\_b1 では，ノードラベルと arity のみから構造キーを作る．
+個体 \(T\) の prefix 表現を
+\begin{equation}
+\left[
+(a_1,d_1),
+(a_2,d_2),
+\dots,
+(a_n,d_n)
+\right]
+\end{equation}
+とすると，
+\begin{equation}
+\kappa_{\mathrm{topo}}(T)
+=
+\left[
+(a_1,d_1),
+(a_2,d_2),
+\dots,
+(a_n,d_n)
+\right]
+\end{equation}
+である．ここで \(a_i\) はノード種別，\(d_i\) は子ノード数である．
+この場合，同じ series/parallel 構造を持つ個体は，
+ばね定数や減衰係数が異なっていても同じ構造として扱われる．
+
+\subsection{b2: トポロジーとノード値の構造キー}
+
+test\_ver2\_b2 では，ノードラベル，arity に加えて，
+ノードが持つパラメータ値も構造キーに含める．
+各ノード \(v\) のラベルを \(a(v)\)，値を \(\theta(v)\)，子ノード列を
+\(\mathrm{ch}(v)\) とすると，再帰的な構造キーを
+\begin{equation}
+\kappa_{\mathrm{topo+val}}(v)
+=
+\left(
+a(v),
+\rho_\theta(\theta(v)),
+|\mathrm{ch}(v)|,
+\{\kappa_{\mathrm{topo+val}}(c)\mid c\in \mathrm{ch}(v)\}
+\right)
+\end{equation}
+と定義する．ここで \(\rho_\theta\) はノード値の丸め処理である．
+
+構造探索問題では，ばねノードのばね定数，ダンパノードの減衰係数が
+\(\theta(v)\) に対応する．記号回帰テンプレートでは，定数ノードの値が
+\(\theta(v)\) に対応する．このため b2 では，
+同じトポロジーでもパラメータ値が異なる設計を別構造として archive に残せる．
+
+\section{文脈付き BO 制御器}
+
+BO の学習対象は ver1 と同じく
+\begin{equation}
+r=f(x,p_c,p_m,k)+\varepsilon
+\end{equation}
+である．\(k\) を離散候補として扱うため，各 \(k\) ごとに
+\begin{equation}
+\mathcal{D}_k
+=
+\{(x_i,p_{c,i},p_{m,i},r_i)\mid k_i=k\}
+\end{equation}
+を構成し，
+\begin{equation}
+f_k(x,p_c,p_m)\sim\mathcal{GP}(m_k,K_k)
+\end{equation}
+を学習する．
+
+現在状態 \(x_\ell\) を固定し，各 \(k\) と \((p_c,p_m)\) 候補に対して
+\(\EI_k(x_\ell,p_c,p_m)\) を評価する．制御則は
+\begin{equation}
+u_\ell^\ast
+=
+\arg\max_{k\in\mathcal{K}(x_\ell)}
+\max_{(p_c,p_m)\in\mathcal{U}_k(x_\ell)}
+\EI_k(x_\ell,p_c,p_m\mid\mathcal{D}_k)
+\end{equation}
+である．
+
+\section{アルゴリズム}
+
+ver2\_b の処理は次の通りである．
+
+\begin{enumerate}[leftmargin=3em]
+  \item 初期集団 \(P_0\) を生成し，評価する．
+  \item 初期 archive \(A_0=\ND(P_0)\) を作る．
+  \item 現在の \(A_{g_\ell}\) と \(P_{g_\ell}\) から状態 \(x_\ell\) を観測する．
+  \item BO が \(u_\ell=(p_c,p_m,k)\) を選択する．
+  \item \(p_c,p_m\) を保持し，GP を \(k_\ell\) 世代実行する．
+  \item 各世代で \(Q_g\) を生成・評価し，\(A_{g+1}=\ND(A_g\cup P_g\cup Q_g)\) を更新する．
+  \item NSGA-II 型選択により \(P_{g+1}\) を決定する．
+  \item 区間終了後，archive HV 改善率と population 多様性から報酬 \(r_\ell\) を計算する．
+  \item \((x_\ell,u_\ell,r_\ell)\) を BO の履歴へ追加する．
+  \item 終了条件を満たすまで繰り返す．
+\end{enumerate}
+
+\section{ver1 からの変更点}
+
+\begin{table}[htbp]
+\centering
+\caption{ver1 と ver2\_b の差分}
+\begin{tabular}{lll}
+\toprule
+項目 & ver1 & ver2\_b \\
+\midrule
+HV の対象 & 明示的分離なし & archive \(A_g\) \\
+多様性の対象 & 現在集団を想定 & population \(P_g\) と明記 \\
+archive 更新 & 詳細未固定 & \(A_g\cup P_g\cup Q_g\) から更新 \\
+最終 Pareto front & 非劣解集合 & archive \(A_T\) から取得 \\
+構造重複判定 & 目的値・構造ペア & b1/b2 で構造キーを切替 \\
+BO 制御則 & \(f(x,p_c,p_m,k)\) & 変更なし \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{まとめ}
+
+ver2\_b では，提案法の中心である
+「GP の状態に応じて \(p_c,p_m,k\) を文脈付き BO で制御する」
+という構造は維持する．
+そのうえで，成果評価を archive，探索状態観測を population に分離し，
+HV・報酬・最終 Pareto front の意味を明確化した．
+
+また，archive における構造重複判定を
+\(\kappa_{\mathrm{topo}}\) と
+\(\kappa_{\mathrm{topo+val}}\)
+の 2 条件で切替可能にした．
+これにより，構造探索問題において，
+同一トポロジーの別パラメータ設計を同一解としてまとめる場合と，
+別設計として保持する場合の両方を比較できる．
+
+\end{document}

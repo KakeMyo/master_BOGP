@@ -1,0 +1,325 @@
+% !TEX program = lualatex
+\documentclass[a4paper,11pt]{ltjsarticle}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\geometry{margin=24mm}
+
+\title{Friedman-I 本実験結果メモ\\
+\large warm-up 除外世代定義に基づく \texttt{bo\_current} の評価}
+\author{}
+\date{2026年06月15日}
+
+\newcommand{\HV}{\mathrm{HV}}
+
+\begin{document}
+\maketitle
+
+\section{目的}
+
+本メモは，Friedman-I シンボリック回帰問題に対して，
+現行の提案手法である \texttt{bo\_current} を適用した本実験結果をまとめるものである．
+今回から，ユーザー指定の「世代数」は BO の warm-up を含まない
+本制御・本評価区間の世代数として扱う．
+したがって，本実験の設定は
+\[
+  \text{総世代数}
+  =
+  \text{warm-up 世代数}
+  +
+  \text{本評価世代数}
+  =
+  18 + 60
+  =
+  78
+\]
+である．
+
+\section{問題選定の理由}
+
+対象問題は Friedman-I 型のシンボリック回帰である．
+入力変数を \(x_1,\ldots,x_5\) とすると，目標関数は
+\[
+  y =
+  10\sin(\pi x_1 x_2)
+  +20(x_3-0.5)^2
+  +10x_4
+  +5x_5
+\]
+で与えられる．各入力は \(x_i\sim U(0,1)\) から生成し，
+訓練点数は 200，テスト点数は 200 とした．
+
+Friedman-I を採用した理由は次の通りである．
+第一に，McDermott らの ``Genetic Programming Needs Better Benchmarks'' は，
+GP 研究で単純すぎる toy benchmark のみを用いることの危険性を指摘している．
+Friedman-I は，線形項，二次項，三角関数，変数間相互作用を含むため，
+単純な \(y=x^2+x\) 型の smoke test よりも本実験に適している．
+第二に，White らの ``Better GP Benchmarks'' は，
+benchmark 選定と実験厳密性，複数 seed による評価の重要性を述べている．
+本実験ではこの考えに従い，固定した問題設定のもとで 100 seed を用いる．
+第三に，La Cava らの SRBench は，symbolic regression を
+再現可能な benchmark として扱う枠組みを示しており，
+精度とモデル複雑さの両方を考慮する評価と相性がよい．
+さらに Liu らの MOGP symbolic regression の研究では，
+NSGA-II による accuracy--complexity 探索で低複雑度個体が過剰に複製され，
+探索効率や多様性に影響する現象が報告されている．
+これは本研究の状態観測量である \(\HV\)，直近改善量，多様性，
+平均木サイズ，停滞長を用いた閉ループ制御の意義と対応している．
+
+\section{目的関数と評価指標}
+
+GP の目的関数は 2 目的である．
+第1目的は訓練データに対する正規化 RMSE，
+第2目的は式木サイズであり，いずれも最小化する．
+すなわち，個体 \(T\) に対して
+\[
+  f_1(T)=\mathrm{NRMSE}_{\mathrm{train}}(T),
+  \qquad
+  f_2(T)=|T|
+\]
+を考える．
+本実験では，探索の成果集合である archive に基づく final archive \(\HV\) を主指標とし，
+population diversity を副指標として用いる．
+また，warm-up 後の挙動を評価するため，
+\[
+  \Delta \HV_{\mathrm{post}}
+  =
+  \HV_{g=78}
+  -
+  \HV_{g=18}
+\]
+と，warm-up 後の \(\HV\) 時間平均を用いる．
+
+\section{実験条件}
+
+比較対象は，固定率 GP 3 条件と，提案法 \texttt{bo\_current} である．
+全手法で同じ多目的 GP エンジンを用い，
+違いは \(p_c\)，\(p_m\)，更新周期 \(k\) の決定方法のみに限定した．
+
+\begin{table}[htbp]
+\centering
+\caption{比較した制御条件}
+\label{tab:main-methods}
+\begin{tabular}{lll}
+\toprule
+手法 & 設定 & 位置づけ \\
+\midrule
+\texttt{plain\_fixed\_standard} & \(p_c=0.80,\ p_m=0.05\) & 標準的な固定率 GP \\
+\texttt{plain\_fixed\_high\_mutation} & \(p_c=0.70,\ p_m=0.20\) & 突然変異を強めた固定率 GP \\
+\texttt{plain\_fixed\_high\_crossover} & \(p_c=0.90,\ p_m=0.05\) & 交叉を強めた固定率 GP \\
+\texttt{bogp\_current} & \(p_c,p_m,k\) を BO で逐次決定 & 提案法の現行版 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{本実験の条件}
+\label{tab:main-setting}
+\begin{tabular}{ll}
+\toprule
+項目 & 設定 \\
+\midrule
+対象問題 & Friedman-I symbolic regression \\
+seed & \(0,\ldots,99\) \\
+seed 数 & 100 \\
+集団サイズ & 24 \\
+warm-up 世代数 & 18 \\
+本評価世代数 & 60 \\
+総世代数 & 78 \\
+評価回数 & 1872 / run \\
+目的数 & 2 \\
+archive key & topology + node value \\
+HV 参照点 & \((1.0,1.0)\) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+現行の \texttt{bo\_current} では，
+\(k\in\{1,3,5\}\) に対して各 \(k\) を2回ずつ warm-up する．
+sequential warm-up のため，世代数としては
+\[
+  1+1+3+3+5+5=18
+\]
+世代が warm-up 区間に対応する．
+その後の 60 世代を本制御・本評価区間として扱った．
+
+\section{結果}
+
+\begin{table}[htbp]
+\centering
+\caption{Friedman-I 本実験の最終指標}
+\label{tab:main-final-results}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrrrr}
+\toprule
+手法 & HV平均 & HV標準偏差 & 多様性平均 & 多様性標準偏差 & warm-up後HV増加 & HV-AUC \\
+\midrule
+\texttt{plain\_fixed\_standard} & 0.782991 & 0.055371 & 0.624480 & 0.108696 & 0.056333 & 0.765837 \\
+\texttt{plain\_fixed\_high\_mutation} & 0.808315 & 0.029862 & 0.646372 & 0.082247 & 0.071250 & 0.788341 \\
+\texttt{plain\_fixed\_high\_crossover} & 0.794766 & 0.029513 & 0.630678 & 0.081329 & 0.054044 & 0.776636 \\
+\texttt{bogp\_current} & 0.802461 & 0.022454 & 0.640513 & 0.086765 & 0.062183 & 0.787353 \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+表\ref{tab:main-final-results}より，
+final archive \(\HV\) 平均が最も高い手法は \texttt{plain\_fixed\_high\_mutation} であった．
+\texttt{bogp\_current} は標準固定率 GP に対して，
+seed 内 final HV 差分平均
+0.019469 を示した．
+一方，高突然変異固定率 GP に対する差分平均は
+-0.005854 であった．
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{outputs/main_bo_current_friedman/sr_alpha_friedman/main_bo_current_friedman_seed100_eval60_20260603/main_final_hv_diversity.png}
+  \caption{final archive HV と final diversity の平均 \(\pm\) 標準偏差}
+  \label{fig:main-final-hv-diversity}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.92\linewidth]{outputs/main_bo_current_friedman/sr_alpha_friedman/main_bo_current_friedman_seed100_eval60_20260603/main_final_hv_boxplot.png}
+  \caption{100 seed における final archive HV の分布}
+  \label{fig:main-final-hv-boxplot}
+\end{figure}
+
+図\ref{fig:main-hv-progress}に archive \(\HV\) の推移を示す．
+破線は warm-up 終了世代 \(g=18\) を表す．
+この図により，初期区間を含めた収束過程と，
+warm-up 後の本評価区間でどの手法が Pareto archive を押し上げたかを分けて確認できる．
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{outputs/main_bo_current_friedman/sr_alpha_friedman/main_bo_current_friedman_seed100_eval60_20260603/main_hv_mean_progress.png}
+  \caption{archive HV の世代推移．帯は標準偏差を示す}
+  \label{fig:main-hv-progress}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{outputs/main_bo_current_friedman/sr_alpha_friedman/main_bo_current_friedman_seed100_eval60_20260603/main_diversity_mean_progress.png}
+  \caption{population diversity の世代推移．帯は標準偏差を示す}
+  \label{fig:main-diversity-progress}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{outputs/main_bo_current_friedman/sr_alpha_friedman/main_bo_current_friedman_seed100_eval60_20260603/main_post_warmup_hv_auc_gain.png}
+  \caption{warm-up 後の HV-AUC と HV 増加量}
+  \label{fig:main-post-warmup}
+\end{figure}
+
+\subsection{seed 内差分}
+
+\begin{table}[htbp]
+\centering
+\caption{\texttt{bo\_current} と固定率GPの seed 内 final HV 差分}
+\label{tab:main-paired-hv}
+\begin{tabular}{lrrrrrr}
+\toprule
+比較 & 差分平均 & 差分標準偏差 & win & tie & loss & Wilcoxon $p$ \\
+\midrule
+\texttt{bo\_current} - standard & 0.019469 & 0.054009 & 70 & 2 & 28 & 0.0000 \\
+\texttt{bo\_current} - high mutation & -0.005854 & 0.032360 & 40 & 1 & 59 & 0.0103 \\
+\texttt{bo\_current} - high crossover & 0.007695 & 0.036345 & 57 & 1 & 42 & 0.0523 \\
+\texttt{bo\_current} - best fixed per seed & -0.014851 & 0.025748 & 31 & 0 & 69 & 0.0000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.92\linewidth]{outputs/main_bo_current_friedman/sr_alpha_friedman/main_bo_current_friedman_seed100_eval60_20260603/main_paired_final_hv_difference.png}
+  \caption{\texttt{bo\_current} と固定率 GP の seed 内 final HV 差分}
+  \label{fig:main-paired-hv}
+\end{figure}
+
+\subsection{\texttt{bo\_current} の制御傾向}
+
+\texttt{bo\_current} の更新周期 \(k\) は，単なる選択回数だけでなく，
+どの世代区間で保持されたかを確認する必要がある．
+図\ref{fig:main-k-alignment}に，代表 seed=26 における
+archive \(\HV\)，population diversity，および保持された更新周期 \(k\) の対応を示す．
+ここで \(k\) は，その世代の結果を表す値ではなく，
+制御更新時点で選択され，次の更新時点までの区間に適用された制御入力である．
+したがって，\(k\) の意味は，同じ世代の \(\HV\) や多様性ではなく，
+その後の区間で \(\HV\) や多様性がどのように変化したかと対応づけて読むべきである．
+
+補助情報として，全制御ステップにおける \(k\) 選択回数は
+\[
+  k=1: 1702,\quad k=3: 816,\quad k=5: 730
+\]
+であり，warm-up 後に限定すると
+\[
+  k=1: 1502,\quad k=3: 616,\quad k=5: 530
+\]
+であった．
+warm-up 後の平均操作率は
+\[
+  \bar{p}_c=0.7137,
+  \qquad
+  \bar{p}_m=0.1402
+\]
+であった．
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{outputs/main_bo_current_friedman/sr_alpha_friedman/main_bo_current_friedman_seed100_eval60_20260603/main_hv_diversity_k_alignment_seed26.png}
+  \caption{代表 seed=26 における archive HV，population diversity，更新周期 \(k\) の世代対応．\(k\) は選択後の区間に保持される制御入力である．}
+  \label{fig:main-k-alignment}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.82\linewidth]{outputs/main_bo_current_friedman/sr_alpha_friedman/main_bo_current_friedman_seed100_eval60_20260603/main_representative_pareto_front.png}
+  \caption{代表 seed=26 における最終 Pareto archive}
+  \label{fig:main-pareto}
+\end{figure}
+
+\section{考察}
+
+本実験では，warm-up を世代数に含めず，
+BO が初期観測を終えた後の 60 世代を
+本評価区間として明示した．
+これにより，従来の 30 世代実験よりも
+\texttt{bo\_current} が状態観測に基づいて制御入力を選ぶ期間を長く確保できた．
+
+結果の解釈では，final archive \(\HV\) を主指標としつつ，
+population diversity と warm-up 後の \(\HV\) 改善量を併せて見る必要がある．
+Friedman-I は accuracy--complexity の 2 目的問題であるため，
+単に誤差を下げるだけではなく，低複雑度の式と高精度の式の
+トレードオフをどれだけ広く獲得できるかが重要である．
+そのため，archive \(\HV\) は成果集合の品質を表し，
+population diversity は探索状態の偏りや早期収束を読む補助指標となる．
+
+また，強い固定率 baseline として高突然変異設定を置いたことにより，
+提案法の評価は単なる標準固定率 GP との比較に留まらない．
+\texttt{bo\_current} が標準固定率を上回る場合でも，
+高突然変異固定率や seed ごとの best fixed に対して十分に優位でなければ，
+「閉ループ制御の枠組みは有望だが，報酬設計や BO 制御器には改善余地がある」
+と解釈するのが妥当である．
+
+\section{参照した文献と反映箇所}
+
+\begin{itemize}
+  \item McDermott et al. (2012), ``Genetic Programming Needs Better Benchmarks'':
+  toy problem だけに依存せず，説明しやすくも単純すぎない benchmark を選ぶ根拠として参照した．
+  \item White et al. (2013), ``Better GP Benchmarks'':
+  複数 seed，比較 baseline，出力ログを揃えた実験設計の根拠として参照した．
+  \item La Cava et al. (2021), ``Contemporary Symbolic Regression Methods and their Relative Performance / SRBench'':
+  symbolic regression を train/test split を持つ benchmark として扱い，
+  accuracy と model complexity を重視する方向性の根拠として参照した．
+  \item Liu et al. (2022), ``Evolvability Degeneration in Multi-Objective Genetic Programming for Symbolic Regression'':
+  accuracy--complexity MOGP における低複雑度個体の過剰複製や多様性低下の問題を，
+  本研究の状態観測量と報酬設計の背景として参照した．
+  \item Li and Yao (2019), ``Quality evaluation of solution sets in multiobjective optimisation: a survey'':
+  Pareto archive の品質評価において，HV と多様性など複数観点を併用する考え方の根拠として参照した．
+\end{itemize}
+
+\end{document}

@@ -1,0 +1,535 @@
+% !TEX program = lualatex
+\documentclass[a4paper,11pt]{ltjsarticle}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{tikz}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\geometry{margin=25mm}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc}
+
+\title{提案手法ver.1\\状態依存ベイズ最適化による多目的GPの閉ループ制御}
+\author{}
+\date{2026年5月18日}
+
+\newcommand{\clip}{\mathrm{clip}}
+\newcommand{\HV}{\mathrm{HV}}
+\newcommand{\EI}{\mathrm{EI}}
+
+\begin{document}
+\maketitle
+
+\section{提案手法の概要}
+
+本研究の提案手法は，多目的遺伝的プログラミング
+(Multi-objective Genetic Programming; MOGP) の世代状態を文脈として観測し，
+交叉率 \(p_c\)，突然変異率 \(p_m\)，次回制御更新までの世代数 \(k\) を，
+文脈付きベイズ最適化により逐次決定する状態依存・閉ループ制御手法である．
+
+本手法の本質は，固定された操作率を単に可変化することではない．
+現在の探索状態に応じて，操作強度である \(p_c,p_m\) と，
+制御更新周期である \(k\) を同時に切り替える点にある．
+このため，提案法は GP の操作パラメータ設定を，
+静的なハイパーパラメータ調整ではなく，進化状態に基づく制御問題として扱う．
+
+\section{背景と問題設定}
+
+GP は，プログラム木や構造表現を進化させることで，
+非線形モデリング，構造探索，制御器設計などに利用される探索手法である．
+多目的 GP では，単一のスカラー目的を最適化するのではなく，
+複数目的間のトレードオフを表す Pareto front または非劣解集合を得ることが重要となる．
+
+しかし，GP の挙動は交叉率 \(p_c\) や突然変異率 \(p_m\) に強く依存する．
+交叉率が高い場合，有望な部分構造の組換えが促進される一方で，
+集団が似た構造へ偏る可能性がある．
+突然変異率が高い場合，新規構造の導入により探索範囲を広げやすいが，
+過度に高いと良い構造の継承を阻害する可能性がある．
+
+従来は，これらの操作率を実験前に固定することが多い．
+しかし，望ましい操作率は問題や探索段階によって変化する．
+探索初期では多様な構造を広く試すことが重要であり，
+探索後半では有望な構造を活用しながら Pareto front を洗練することが重要となる．
+そこで本研究では，GP の操作率設定を閉ループ制御問題として定式化する．
+
+\section{閉ループ制御構造}
+
+提案手法では，GP 本体をプラント，ベイズ最適化
+(Bayesian Optimization; BO) を制御器とみなす．
+BO は更新時点の GP 状態を観測し，次区間の制御入力を決定する．
+GP はその入力を一定世代数だけ保持して進化し，区間終了後に得られる統計量から報酬を計算する．
+図\ref{fig:closed_loop}に全体構造を示す．
+
+\begin{figure}[htbp]
+\centering
+\resizebox{0.96\linewidth}{!}{%
+\begin{tikzpicture}[
+  node distance=9mm and 14mm,
+  block/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=39mm, minimum height=9mm, fill=blue!6},
+  controller/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=39mm, minimum height=10mm, fill=orange!10},
+  plant/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=39mm, minimum height=11mm, fill=green!9},
+  data/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=39mm, minimum height=9mm, fill=purple!7},
+  arrow/.style={-Latex, thick},
+  labelbox/.style={fill=white, inner sep=1.5pt}
+]
+\node[block] (obs) {状態観測\\ \(\tau,\HV,\Delta \HV,D,\bar{L},s\)};
+\node[controller, right=27mm of obs] (bo) {文脈付きBO制御器\\ GP surrogate + EI};
+\node[data, below=12mm of bo] (act) {制御入力\\ \(u_\ell=(p_c,p_m,k)\)};
+\node[plant, below=12mm of obs] (plant) {GPプラント\\ \(p_c,p_m\) を保持して \(k\) 世代実行};
+\node[block, below=12mm of plant] (stat) {区間統計\\ \(\Delta \HV^{\mathrm{rate}},\bar{D},C_k\)};
+\node[data, right=27mm of stat] (reward) {報酬・履歴更新\\ \(r_\ell,\ (x_\ell,u_\ell,r_\ell)\)};
+
+\draw[arrow] (obs.east) -- node[labelbox, above] {文脈 \(x_\ell\)} (bo.west);
+\draw[arrow] (bo.south) -- node[labelbox, right] {EI最大化} (act.north);
+\draw[arrow] (act.west) -| node[labelbox, near start, below] {操作入力} (plant.east);
+\draw[arrow] (plant.south) -- node[labelbox, left] {区間終了} (stat.north);
+\draw[arrow] (stat.east) -- node[labelbox, above] {評価量} (reward.west);
+\draw[arrow]
+  (reward.east)
+  -- ++(12mm,0)
+  |- node[labelbox, pos=0.35, right] {BO更新} (bo.east);
+
+\draw[arrow]
+  (plant.west)
+  -- ++(-13mm,0)
+  |- node[labelbox, near end, left] {次更新時点の集団} (obs.west);
+\end{tikzpicture}
+}
+\caption{提案手法の閉ループ制御構造}
+\label{fig:closed_loop}
+\end{figure}
+
+\section{時間軸とプラントの定式化}
+
+本手法では，2 種類の時間軸を区別する．
+\begin{itemize}[leftmargin=3em]
+  \item \(g\): GP の世代番号
+  \item \(\ell\): BO が介入する制御更新ステップ番号
+\end{itemize}
+
+制御ステップ \(\ell\) において，BO は次の行動を決定する．
+\begin{equation}
+u_\ell =
+\left(
+p_{c,\ell},
+p_{m,\ell},
+k_\ell
+\right).
+\end{equation}
+
+ここで \(k_\ell\) は次回 BO 更新までの世代数である．
+したがって，連続する制御更新時点の世代番号は
+\begin{equation}
+g_{\ell+1}=g_\ell+k_\ell
+\end{equation}
+で与えられる．
+
+世代 \(g\) における GP 集団を \(P_g\) とする．
+GP の進化作用全体を \(F\)，確率的ゆらぎを \(\xi_\ell\) とすれば，
+制御区間 \(\ell\) における集団遷移は
+\begin{equation}
+P_{g_{\ell+1}}
+=
+F(P_{g_\ell},u_\ell,\xi_\ell)
+\end{equation}
+と表せる．
+
+\section{状態ベクトル}
+
+BO に渡す文脈ベクトルを次の 6 変数で定義する．
+\begin{equation}
+x_\ell =
+\left[
+\tau_\ell,\;
+\widetilde{\HV}_\ell,\;
+\widetilde{\Delta \HV}_\ell,\;
+D_\ell,\;
+\widetilde{L}_\ell,\;
+\widetilde{s}_\ell
+\right]^\top .
+\end{equation}
+
+\begin{table}[htbp]
+\centering
+\caption{状態ベクトルの構成}
+\begin{tabular}{lll}
+\toprule
+記号 & 意味 & 役割 \\
+\midrule
+\(\tau_\ell\) & 世代進行率 & 探索段階を表す \\
+\(\widetilde{\HV}_\ell\) & 正規化 HV & 現在性能を表す \\
+\(\widetilde{\Delta \HV}_\ell\) & 正規化直近改善量 & 改善中か停滞中かを表す \\
+\(D_\ell\) & 多様性 & 集団の探索余地を表す \\
+\(\widetilde{L}_\ell\) & 正規化平均木サイズ & bloat や構造複雑化を表す \\
+\(\widetilde{s}_\ell\) & 正規化停滞長 & 改善停滞の長さを表す \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+世代進行率は
+\begin{equation}
+\tau_\ell=\frac{g_\ell}{T}
+\end{equation}
+である．ここで \(T\) は総世代数である．
+
+HV は
+\begin{equation}
+\widetilde{\HV}_\ell
+=
+\clip
+\left(
+\frac{\HV_\ell-\HV_{\min}}{\HV_{\max}-\HV_{\min}},
+0,1
+\right)
+\end{equation}
+で正規化する．
+
+直近改善量は
+\begin{equation}
+\widetilde{\Delta \HV}_\ell
+=
+\clip
+\left(
+\frac{\HV_\ell-\HV_{\ell-1}}{\delta_{\HV}},
+-1,1
+\right)
+\end{equation}
+とする．
+
+平均木サイズと停滞長は
+\begin{equation}
+\widetilde{L}_\ell
+=
+\clip
+\left(
+\frac{\bar{L}_\ell}{L_{\mathrm{ref}}},
+0,1
+\right),
+\quad
+\widetilde{s}_\ell
+=
+\clip
+\left(
+\frac{s_\ell}{s_{\max}},
+0,1
+\right)
+\end{equation}
+とする．
+
+\subsection{構造多様性}
+
+多様性 \(D_\ell\) の第一候補として構造多様性を用いる．
+集団を \(P_{g_\ell}=\{T_1,\dots,T_N\}\) とすると，
+\begin{equation}
+D_\ell
+=
+1
+-
+\frac{2}{N(N-1)}
+\sum_{1\le i<j\le N}
+Sim_g(T_i,T_j)
+\end{equation}
+である．
+
+構造類似度は，共有部分木集合 \(M(T_i,T_j)\) を用いて
+\begin{equation}
+Sim_g(T_i,T_j)
+=
+\frac{|M(T_i,T_j)|}
+{|T_i|+|T_j|-|M(T_i,T_j)|}
+\end{equation}
+と定義する．
+
+\section{行動と制約}
+
+提案手法の行動は
+\begin{equation}
+u_\ell=(p_{c,\ell},p_{m,\ell},k_\ell)
+\end{equation}
+である．
+
+行動空間は
+\begin{equation}
+\mathcal{U}(x_\ell)
+=
+\left\{
+(p_c,p_m,k)
+\middle|
+\begin{array}{l}
+p_c\in[p_c^{\min},p_c^{\max}],\\
+p_m\in[p_m^{\min},p_m^{\max}],\\
+k\in\mathcal{K},\\
+p_c+p_m\le 1
+\end{array}
+\right\}
+\end{equation}
+とする．
+
+\(\mathcal{K}\) は更新周期の候補集合であり，
+\begin{equation}
+\mathcal{K}=\{k^{(1)},k^{(2)},\dots,k^{(M)}\}
+\end{equation}
+のような有限離散集合である．
+
+\section{報酬関数}
+
+報酬は，進捗，多様性維持，制御コストの 3 要素で構成する．
+まず，進捗項には世代あたり HV 改善量を用いる．
+\begin{equation}
+\Delta \HV^{\mathrm{rate}}_\ell
+=
+\frac{\HV_{\ell+1}-\HV_\ell}{k_\ell}
+\end{equation}
+\begin{equation}
+\widetilde{\Delta \HV}^{\mathrm{rate}}_\ell
+=
+\clip
+\left(
+\frac{\Delta \HV^{\mathrm{rate}}_\ell}
+{\delta_{\HV}^{\mathrm{rate}}},
+-1,1
+\right)
+\end{equation}
+
+多様性項には区間平均多様性を用いる．
+\begin{equation}
+\bar{D}_\ell
+=
+\frac{1}{k_\ell}
+\sum_{j=1}^{k_\ell}
+D_{\ell,j}
+\end{equation}
+
+目標多様性を
+\begin{equation}
+D^\ast(\tau)
+=
+D_{\mathrm{start}}
+-
+(D_{\mathrm{start}}-D_{\mathrm{end}})\tau
+\end{equation}
+とし，多様性整合度を
+\begin{equation}
+S_D(\bar{D}_\ell,\tau_{\ell+1})
+=
+\exp
+\left[
+-
+\left(
+\frac{\bar{D}_\ell-D^\ast(\tau_{\ell+1})}
+{\sigma_D}
+\right)^2
+\right]
+\end{equation}
+で与える．
+
+制御コストは
+\begin{equation}
+C_k(k_\ell)
+=
+\frac{k_{\max}-k_\ell}{k_{\max}-k_{\min}}
+\end{equation}
+とする．
+
+最終報酬は
+\begin{equation}
+r_\ell
+=
+w_p
+\widetilde{\Delta \HV}^{\mathrm{rate}}_\ell
++
+w_d
+S_D(\bar{D}_\ell,\tau_{\ell+1})
+-
+w_c
+C_k(k_\ell)
+\end{equation}
+である．
+初稿では \(w_p>w_d>w_c\) を基本方針とする．
+
+\section{文脈付き BO 制御器}
+
+履歴データを
+\begin{equation}
+\mathcal{D}_n
+=
+\{(x_i,p_{c,i},p_{m,i},k_i,r_i)\}_{i=1}^{n}
+\end{equation}
+とする．
+
+本手法では \(k\) を離散候補として扱うため，各 \(k\) ごとに
+\begin{equation}
+\mathcal{D}_k
+=
+\{(x_i,p_{c,i},p_{m,i},r_i)\mid k_i=k\}
+\end{equation}
+を構成する．
+
+各 \(k\) に対して，報酬関数を
+\begin{equation}
+r=f_k(x,p_c,p_m)+\varepsilon
+\end{equation}
+とモデル化し，
+\begin{equation}
+f_k(x,p_c,p_m)
+\sim
+\mathcal{GP}(m_k,K_k)
+\end{equation}
+を学習する．
+
+入力は
+\begin{equation}
+z_k=[x,p_c,p_m]
+\end{equation}
+であり，状態 6 次元と操作率 2 次元を合わせた 8 次元である．
+
+カーネルは初稿では
+\begin{equation}
+K_k(z,z')
+=
+\mathrm{Constant}
+\times
+\mathrm{Matern}_{\nu=2.5}^{\mathrm{ARD}}
++
+\mathrm{WhiteNoise}
+\end{equation}
+を基本とする．
+
+\section{獲得関数と行動選択}
+
+獲得関数は Expected Improvement (EI) とする．
+現在状態 \(x_\ell\) を固定し，各 \(k\) と各 \((p_c,p_m)\) 候補に対して
+\begin{equation}
+\EI_k(x_\ell,p_c,p_m\mid\mathcal{D}_k)
+\end{equation}
+を評価する．
+
+最終的な制御則は
+\begin{equation}
+u_\ell^\ast
+=
+\arg\max_{k\in\mathcal{K}(x_\ell)}
+\max_{(p_c,p_m)\in\mathcal{U}_k(x_\ell)}
+\EI_k(x_\ell,p_c,p_m\mid\mathcal{D}_k)
+\end{equation}
+である．
+
+ここで
+\begin{equation}
+\mathcal{K}(x_\ell)
+=
+\{k\in\mathcal{K}\mid k\le T-g_\ell\}
+\end{equation}
+であり，残り世代数を超える \(k\) は候補から除外する．
+
+\section{アルゴリズム}
+
+図\ref{fig:algorithm}に提案手法の処理流れを示す．
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  node distance=8mm,
+  flow/.style={rectangle, rounded corners, draw, align=center, minimum width=48mm, minimum height=8mm, fill=blue!5},
+  decision/.style={diamond, draw, align=center, aspect=2.0, inner sep=1.5pt, fill=yellow!15},
+  arrow/.style={-Latex, thick}
+]
+\node[flow] (init) {初期集団 \(P_0\) を生成};
+\node[flow, below=of init] (obs) {状態 \(x_\ell\) を観測};
+\node[decision, below=of obs] (warm) {warm-up中?};
+\node[flow, below left=10mm and 16mm of warm] (design) {設計点から\\ \(u_\ell\) を選択};
+\node[flow, below right=10mm and 16mm of warm] (bo) {EI最大化で\\ \(u_\ell=(p_c,p_m,k)\) を選択};
+\node[flow, below=22mm of warm] (run) {GPを \(k_\ell\) 世代実行};
+\node[flow, below=of run] (stat) {区間統計を計算};
+\node[flow, below=of stat] (reward) {報酬 \(r_\ell\) を計算};
+\node[flow, below=of reward] (update) {\((x_\ell,u_\ell,r_\ell)\) を BO に追加};
+\node[decision, below=of update] (end) {終了条件?};
+
+\draw[arrow] (init) -- (obs);
+\draw[arrow] (obs) -- (warm);
+\draw[arrow] (warm) -- node[left] {Yes} (design);
+\draw[arrow] (warm) -- node[right] {No} (bo);
+\draw[arrow] (design) |- (run);
+\draw[arrow] (bo) |- (run);
+\draw[arrow] (run) -- (stat);
+\draw[arrow] (stat) -- (reward);
+\draw[arrow] (reward) -- (update);
+\draw[arrow] (update) -- (end);
+\draw[arrow] (end.east) -- ++(22mm,0) |- node[pos=0.25,right] {No} (obs.east);
+\draw[arrow] (end.south) -- ++(0,-8mm) node[below] {Yes: 終了};
+\end{tikzpicture}
+\caption{提案手法のアルゴリズムフロー}
+\label{fig:algorithm}
+\end{figure}
+
+文章で表すと，処理は次の通りである．
+\begin{enumerate}
+  \item 初期集団 \(P_0\) を生成し，\(g_0=0,\ell=0\) とする．
+  \item 現在集団 \(P_{g_\ell}\) から状態 \(x_\ell\) を観測する．
+  \item warm-up 中であれば，初期設計点から行動 \(u_\ell\) を選ぶ．
+  \item warm-up 後であれば，文脈付き BO により EI を最大化する行動を選ぶ．
+  \item \(p_c,p_m\) を保持し，GP を \(k_\ell\) 世代実行する．
+  \item 区間統計 \(\Delta \HV^{\mathrm{rate}}_\ell,\bar{D}_\ell,C_k(k_\ell)\) を計算する．
+  \item 報酬 \(r_\ell\) を計算する．
+  \item \((x_\ell,u_\ell,r_\ell)\) を BO の履歴へ追加する．
+  \item 終了条件を満たすまで繰り返す．
+\end{enumerate}
+
+\section{比較手法との差分}
+
+\begin{table}[htbp]
+\centering
+\caption{比較手法との差分}
+\begin{tabular}{llll}
+\toprule
+手法 & 操作率 & 状態観測 & 学習対象 \\
+\midrule
+固定率 GP & 固定 & なし & なし \\
+手設計スケジュール & 世代に依存 & なし & なし \\
+非文脈 BO & BO が決定 & なし & \(f(p_c,p_m,k)\) \\
+提案法 & BO が決定 & あり & \(f(x,p_c,p_m,k)\) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+提案法の差分は，単に BO を使う点ではない．
+最も重要なのは，現在の GP 状態 \(x_\ell\) を条件として含める点である．
+
+\section{研究仮説}
+
+本研究では，次の仮説を置く．
+
+\begin{description}
+  \item[H1] 状態依存 BO は，固定率 GP および非文脈 BO よりも，HV 改善と多様性維持を両立できる．
+  \item[H2] \(k\) を制御対象に含めることで，毎世代更新より少ない制御回数で同等以上の進化性能を達成できる．
+  \item[H3] 報酬から多様性項を除くと，短期的な HV 改善に偏り，早期収束しやすくなる．
+\end{description}
+
+\section{V1で未確定の事項}
+
+V1 では，提案手法の大枠を固定することを優先し，次の項目は今後の検討対象とする．
+
+\begin{itemize}
+  \item \(p_c,p_m\) の具体的上下限
+  \item \(\mathcal{K}\) の具体的候補値
+  \item \(w_p,w_d,w_c\) の具体値
+  \item HV 正規化範囲と参照点
+  \item 多様性指標を構造多様性のみにするか，表現型多様性を加えるか
+  \item 非文脈 BO，手設計スケジュール，多様性項なし，\(k\) 制御なしとの比較設計
+  \item 3 目的以上に拡張した場合の HV 計算方法
+\end{itemize}
+
+\section{まとめ}
+
+本提案手法は，多目的 GP の操作率設定を固定ハイパーパラメータ調整ではなく，
+状態依存の閉ループ制御問題として扱う．
+GP をプラント，BO を制御器とみなし，更新時点の状態 \(x_\ell\) に基づいて
+\(p_c,p_m,k\) を同時に決定する．
+
+この設計により，提案法は探索初期，停滞期，収束期といった進化状態の違いに応じて，
+探索の強さと制御更新頻度を切り替えられる．
+したがって，本研究の中心的な主張は，固定率を BO で置き換えることではなく，
+GP の探索状態に応じて操作強度と更新周期を同時に制御する文脈付き閉ループ制御を導入する点にある．
+
+\end{document}

@@ -1,0 +1,32 @@
+# Multivariate Adaptive Regression Splines
+
+- Reference ID: [R26]
+- Status: Adopted
+- Category: C/D
+- Citation: Friedman, J. H. (1991). *Multivariate Adaptive Regression Splines*. The Annals of Statistics, 19(1), 1-67. https://doi.org/10.1214/aos/1176347963
+- DOI: 10.1214/aos/1176347963
+- URL: https://projecteuclid.org/euclid.aos/1176347963
+- CiNii URL: https://cir.nii.ac.jp/crid/1361699994684196608
+- Source checked: CiNii Research, Project Euclid metadata, Stanford technical report metadata, and saved PDF copy.
+- Access: PDF saved from a university-hosted JSTOR copy; official Project Euclid metadata checked.
+- Local PDF: references/Multivariate Adaptive Regression Splines.pdf
+- Citation signal: CiNii Research listed 25 citations on 2026-06-09; this is not a full citation-count assessment.
+- Why this paper matters:
+  - Original source of Multivariate Adaptive Regression Splines (MARS), which introduced benchmark-style simulated regression examples later known as Friedman problems.
+  - Provides the primary bibliographic root for the Friedman synthetic regression family used in machine learning and symbolic regression benchmarks.
+  - Helps justify that the target problem is not an arbitrary toy function but a standard synthetic regression problem originating from statistical learning research.
+- Information used in this project:
+  - Use as the original source for the Friedman regression problem family.
+  - Use together with implementation-oriented sources such as scikit-learn and Breiman (1996) [R27] when specifying the exact `make_friedman1`-style target function.
+  - Use to explain that the problem is designed for nonlinear regression with variable interactions.
+- Related note sections:
+  - notes/research_note.md 10.2
+  - reference_candidates/problem_settings/friedman_i_explanation_sources.md
+  - Paper experimental setup section on Friedman-I / Friedman #1 symbolic regression
+- Manual download queries:
+  - Complete title: Multivariate Adaptive Regression Splines
+  - Author year query: Friedman 1991 Multivariate Adaptive Regression Splines Friedman #1
+  - DOI: 10.1214/aos/1176347963
+- Next action:
+  - In the paper, define the formula explicitly and cite this paper as the original source of the Friedman regression family.
+  - Add a note that some GP/SR papers use different names for the additive and sine-interaction Friedman variants.

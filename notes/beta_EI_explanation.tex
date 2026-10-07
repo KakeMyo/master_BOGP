@@ -1,0 +1,457 @@
+% !TEX program = lualatex
+\documentclass[a4paper,11pt]{ltjsarticle}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\geometry{margin=24mm}
+
+\title{\(\beta_{\mathrm{EI}}\) における EI の扱い\\
+bo\_current との違いの整理}
+\author{}
+\date{2026年6月2日}
+
+\newcommand{\BO}{\mathrm{BO}}
+\newcommand{\GP}{\mathrm{GP}}
+\newcommand{\EI}{\mathrm{EI}}
+\newcommand{\HV}{\mathrm{HV}}
+\newcommand{\Normal}{\mathcal{N}}
+
+\begin{document}
+\maketitle
+
+\section{本メモの目的}
+
+本メモは，今後の提案手法候補として扱う
+\(\beta_{\mathrm{EI}}\) について，
+BO 制御器内で用いる Expected Improvement（EI）の意味と，
+現行版である \texttt{bo\_current} との違いを整理するものである．
+
+本研究の提案手法では，多目的 GP の世代状態を観測し，
+文脈付き BO により
+\[
+  u_\ell = (p_{c,\ell},p_{m,\ell},k_\ell)
+\]
+を決定する．
+ここで \(p_c\) は交叉率，\(p_m\) は突然変異率，
+\(k\) は次回の制御更新までの世代数である．
+
+\section{BO 制御器の基本構造}
+
+制御更新ステップ \(\ell\) において，
+現在の GP 状態を文脈ベクトル
+\[
+  x_\ell =
+  [
+  \tau_\ell,
+  \widetilde{\HV}_\ell,
+  \widetilde{\Delta \HV}_\ell,
+  D_\ell,
+  \widetilde{L}_\ell,
+  \widetilde{s}_\ell
+  ]^\top
+\]
+として観測する．
+
+BO 制御器は，この文脈 \(x_\ell\) の下で，
+候補となる \((p_c,p_m,k)\) を評価し，
+次に試す制御入力を選択する．
+実装上は，\(k\) を連続変数として扱うのではなく，
+\[
+  k \in \mathcal{K}=\{1,3,5\}
+\]
+の離散候補として扱い，各 \(k\) ごとに別々の GP surrogate を持つ．
+したがって，
+\[
+  f_k(x,p_c,p_m)
+  \sim
+  \GP
+\]
+を \(k=1,3,5\) それぞれについて学習する形である．
+
+各 \(k\) に対して，現在文脈 \(x_\ell\) を固定し，
+\((p_c,p_m)\) の候補集合を生成する．
+その候補に対して GP surrogate は，
+\[
+  r \mid x_\ell,p_c,p_m,k
+  \sim
+  \Normal(\mu_k,\sigma_k^2)
+\]
+を予測する．
+ここで \(r\) は，区間実行後に計算される報酬である．
+
+図\ref{fig:beta-ei-control-flow}に，\texttt{bo\_current} と
+\(\beta_{\mathrm{EI}}\) の違いを制御器内部の流れとして示す．
+両者とも，現在状態 \(x_\ell\) を観測し，
+\(k\in\{1,3,5\}\) の各候補について surrogate を用いて
+EI を評価する点は同じである．
+違うのは，EI を計算するときの基準値である．
+\texttt{bo\_current} は \(k\) ごとの最良値を使い，
+\(\beta_{\mathrm{EI}}\) は全 \(k\) 共通の最良値を使う．
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{notes/figures/beta_EI/beta_EI_control_flow.png}
+  \caption{\(\beta_{\mathrm{EI}}\) における EI 基準値変更の位置づけ}
+  \label{fig:beta-ei-control-flow}
+\end{figure}
+
+\section{EI の基本式}
+
+EI は Expected Improvement の略であり，
+「ある候補を試したとき，過去の最良報酬をどの程度上回れそうか」
+を表す獲得関数である．
+
+ある候補点での予測平均を \(\mu\)，予測標準偏差を \(\sigma\)，
+過去の基準値を \(r_{\mathrm{best}}\)，
+探索余裕を \(\xi\) とすると，改善量は
+\[
+  I = \mu - r_{\mathrm{best}} - \xi
+\]
+である．
+EI は
+\[
+  \EI = \mathbb{E}[\max(0,I)]
+\]
+として定義される．
+GP surrogate の予測分布が正規分布であるとき，
+\[
+  z = \frac{\mu-r_{\mathrm{best}}-\xi}{\sigma}
+\]
+を用いて，
+\[
+  \EI
+  =
+  (\mu-r_{\mathrm{best}}-\xi)\Phi(z)
+  +
+  \sigma\phi(z)
+\]
+と計算できる．
+ここで \(\Phi(\cdot)\) は標準正規分布の累積分布関数，
+\(\phi(\cdot)\) は標準正規分布の確率密度関数である．
+
+この式は，次の 2 つの効果を同時に含む．
+\begin{itemize}
+  \item 予測平均 \(\mu\) が高い候補を選びやすい．
+  \item 予測不確実性 \(\sigma\) が大きい候補も，探索価値があるため選ばれやすい．
+\end{itemize}
+
+したがって EI は， exploitation（良さそうな候補の利用）と
+exploration（不確実な候補の探索）のバランスを取る獲得関数である．
+
+\section{\texttt{bo\_current} における EI}
+
+\texttt{bo\_current} では，
+EI の基準値 \(r_{\mathrm{best}}\) を
+各 \(k\) の中での過去最高報酬として定義する．
+すなわち，
+\[
+  r_{\mathrm{best}}^{(k)}
+  =
+  \max
+  \{ r_i \mid k_i = k \}
+\]
+である．
+
+この場合，\(k=1\) の候補を評価するときは，
+\[
+  r_{\mathrm{best}}^{(1)}
+\]
+を基準に EI を計算する．
+同様に，\(k=3\) の候補では
+\[
+  r_{\mathrm{best}}^{(3)}
+\]
+を，\(k=5\) の候補では
+\[
+  r_{\mathrm{best}}^{(5)}
+\]
+を用いる．
+
+したがって，\texttt{bo\_current} の EI は
+\[
+  \EI_k(x,p_c,p_m)
+  =
+  \EI
+  \left(
+  \mu_k(x,p_c,p_m),
+  \sigma_k(x,p_c,p_m),
+  r_{\mathrm{best}}^{(k)}
+  \right)
+\]
+として解釈できる．
+
+\subsection{直感的な意味}
+
+\texttt{bo\_current} は，
+各 \(k\) について，
+\begin{quote}
+  「この \(k\) の中で，今までより良くなりそうか」
+\end{quote}
+を見る方法である．
+
+この設計の利点は，\(k=1,3,5\) をそれぞれ独立に育てられることである．
+まだ全体としては弱い \(k\) であっても，
+その \(k\) 内で改善余地があれば選ばれる可能性が残る．
+
+一方で，弱点もある．
+各 \(k\) が別々の基準値を持つため，
+\[
+  \text{「その \(k\) の中では良いが，全体ではそれほど良くない」}
+\]
+候補が高い EI を持つ場合がある．
+つまり，\(k\) 間の比較基準が完全にはそろっていない．
+
+\section{beta\_EI における EI}
+
+\(\beta_{\mathrm{EI}}\) では，warm-up の順序は \texttt{bo\_current} と同じままで，
+EI の基準値だけを変更する．
+具体的には，各 \(k\) の中の過去最高ではなく，
+全 \(k\) を含めた過去最高報酬を基準値とする．
+
+すなわち，
+\[
+  r_{\mathrm{best}}^{\mathrm{global}}
+  =
+  \max_i r_i
+\]
+である．
+
+このとき，任意の \(k\) に対して，
+\[
+  \EI_k(x,p_c,p_m)
+  =
+  \EI
+  \left(
+  \mu_k(x,p_c,p_m),
+  \sigma_k(x,p_c,p_m),
+  r_{\mathrm{best}}^{\mathrm{global}}
+  \right)
+\]
+を計算する．
+
+したがって，\(\beta_{\mathrm{EI}}\) は，
+\begin{quote}
+  「\(k\) が何であっても，全体の過去最高を超えられそうか」
+\end{quote}
+を見る方法である．
+
+\section{両者の違い}
+
+\begin{table}[htbp]
+\centering
+\caption{\texttt{bo\_current} と \(\beta_{\mathrm{EI}}\) の違い}
+\begin{tabular}{lll}
+\toprule
+手法 & warm-up & EI の基準値 \\
+\midrule
+\texttt{bo\_current} & sequential & \(k\) ごとの過去最高 \(r_{\mathrm{best}}^{(k)}\) \\
+\(\beta_{\mathrm{EI}}\) & sequential & 全 \(k\) 共通の過去最高 \(r_{\mathrm{best}}^{\mathrm{global}}\) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+図\ref{fig:ei-reference-comparison}は，この違いを数値例として示したものである．
+左図の \texttt{bo\_current} では，\(k=1\) の候補は
+\(k=1\) 内の最良値 \(0.30\) と比較される．
+そのため，予測報酬が \(0.35\) 程度であれば，
+\(k=1\) の中では改善候補として見えやすい．
+右図の \(\beta_{\mathrm{EI}}\) では，全 \(k\) 共通の最良値 \(0.60\) が基準になる．
+この場合，同じ \(0.35\) の候補は全体最良を超えられないため，
+EI は小さくなりやすい．
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{notes/figures/beta_EI/ei_reference_comparison.png}
+  \caption{\texttt{bo\_current} と \(\beta_{\mathrm{EI}}\) における EI 基準値の違い}
+  \label{fig:ei-reference-comparison}
+\end{figure}
+
+\texttt{bo\_current} は，
+\[
+  r_{\mathrm{best}}^{(k)}
+  =
+  \max \{ r_i \mid k_i=k \}
+\]
+を使う．
+一方，\(\beta_{\mathrm{EI}}\) は，
+\[
+  r_{\mathrm{best}}^{\mathrm{global}}
+  =
+  \max \{ r_i \mid i=1,\dots,n \}
+\]
+を使う．
+
+したがって，違いは
+\[
+  \text{「\(k\) ごとに改善を見るか」}
+\]
+と
+\[
+  \text{「全 \(k\) 共通で改善を見るか」}
+\]
+である．
+
+\section{具体例}
+
+例えば，過去の最高報酬が次のように得られていたとする．
+\[
+  r_{\mathrm{best}}^{(1)}=0.30,\quad
+  r_{\mathrm{best}}^{(3)}=0.45,\quad
+  r_{\mathrm{best}}^{(5)}=0.60.
+\]
+
+このとき，\texttt{bo\_current} で \(k=1\) の候補を評価する場合，
+基準値は
+\[
+  r_{\mathrm{best}}^{(1)}=0.30
+\]
+である．
+したがって，ある \(k=1\) 候補の予測報酬が \(0.35\) 程度であれば，
+「\(k=1\) の中では改善が期待できる」と判断される．
+
+一方，\(\beta_{\mathrm{EI}}\) では全体最高の
+\[
+  r_{\mathrm{best}}^{\mathrm{global}}=0.60
+\]
+が基準となる．
+そのため，同じ \(k=1\) 候補が \(0.35\) 程度を予測されても，
+全体最高の \(0.60\) は超えられないため，
+EI は小さくなりやすい．
+
+このように，\(\beta_{\mathrm{EI}}\) は，
+各 \(k\) 内での局所的な改善ではなく，
+全体として強い候補を優先しやすい．
+
+\section{実験結果から見た位置づけ}
+
+100 seed の比較では，Friedman-I において
+\(\beta_{\mathrm{EI}}\) が平均 final archive HV で最良であった．
+
+\begin{table}[htbp]
+\centering
+\caption{Friedman-I における 100 seed 比較}
+\begin{tabular}{lrrrr}
+\toprule
+手法 & HV 平均 & HV 標準偏差 & Diversity 平均 & Diversity 標準偏差 \\
+\midrule
+\texttt{bo\_current} & 0.773081 & 0.055720 & 0.603050 & 0.123937 \\
+\(\beta_k\) & 0.774463 & 0.046293 & 0.603639 & 0.119035 \\
+\(\beta_{\mathrm{EI}}\) & 0.774922 & 0.050454 & 0.606697 & 0.122603 \\
+\(\beta_{k\mathrm{EI}}\) & 0.771281 & 0.066523 & 0.600508 & 0.139885 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+図\ref{fig:seed100-metrics}に，Friedman-I と Poly-10 の
+final archive HV および diversity を平均 \(\pm\) 標準偏差で示す．
+Friedman-I では \(\beta_{\mathrm{EI}}\) が HV 平均で最も高く，
+diversity もわずかに高い．
+一方で，Poly-10 では \(\beta_{k\mathrm{EI}}\) の HV 平均が最も高いが，
+各手法の差は標準偏差に比べると小さい．
+このため，単純な平均値だけでなく，seed 内差分を見る必要がある．
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{notes/figures/beta_EI/seed100_hv_diversity_bars.png}
+  \caption{seed 100 比較における final archive HV と diversity}
+  \label{fig:seed100-metrics}
+\end{figure}
+
+図\ref{fig:seed100-hv-diff}は，
+同じ seed 内で \texttt{bo\_current} との差分を取ったものである．
+Friedman-I では \(\beta_{\mathrm{EI}}\) の平均差が正であり，
+かつ差分の標準偏差が他の変更案より小さい．
+これは，\(\beta_{\mathrm{EI}}\) が少なくとも Friedman-I では
+比較的安定した候補であることを示唆する．
+ただし，差分そのものは小さいため，
+今後は統計検定や \(k\) ごとの報酬分布の確認が必要である．
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{notes/figures/beta_EI/seed100_hv_diff_vs_bo_current.png}
+  \caption{\texttt{bo\_current} を基準にした seed 内 final HV 差分}
+  \label{fig:seed100-hv-diff}
+\end{figure}
+
+この結果から，Friedman-I では，
+\texttt{bo\_current} のように \(k\) ごとの局所的な改善を見るよりも，
+\(\beta_{\mathrm{EI}}\) のように全 \(k\) 共通の基準で改善を評価した方が，
+やや良い結果になった可能性がある．
+
+ただし，差は非常に大きいわけではない．
+\(\beta_{\mathrm{EI}}\) と \texttt{bo\_current} の HV 平均差は約 \(0.00184\) である．
+したがって，今後は paired difference の可視化や統計検定により，
+この差が偶然ではないかを確認する必要がある．
+
+\section{beta\_EI の利点と注意点}
+
+\subsection{利点}
+
+\(\beta_{\mathrm{EI}}\) の利点は，\(k\) 間の EI 比較基準をそろえられることである．
+\texttt{bo\_current} では，\(k=1,3,5\) がそれぞれ異なる過去最高を持つため，
+各 \(k\) の EI が完全には同じ意味を持たない．
+一方，\(\beta_{\mathrm{EI}}\) では全 \(k\) 共通の過去最高を使うため，
+候補が
+\[
+  \text{「全体として本当に高い報酬を超えられそうか」}
+\]
+を基準に評価される．
+
+これにより，特定の \(k\) 内だけでの局所的な改善に引っ張られにくくなる．
+
+\subsection{注意点}
+
+一方で，\(\beta_{\mathrm{EI}}\) にも注意点がある．
+\(k=1,3,5\) は同じ報酬関数で評価されているが，
+実際には観測ノイズ，更新頻度，区間内の多様性変化が異なる．
+そのため，全 \(k\) 共通の過去最高をそのまま基準にすると，
+ある \(k\) が不利になりすぎる可能性がある．
+
+特に，ある \(k\) で偶然高い報酬が得られると，
+その値が全体基準となり，他の \(k\) の候補の EI が小さく見えやすい．
+したがって，\(\beta_{\mathrm{EI}}\) を本採用する場合でも，
+次のような追加検討が必要である．
+
+\begin{itemize}
+  \item \(k\) ごとの報酬分布の違いを確認する．
+  \item \(k\) ごとに標準化した EI を検討する．
+  \item global EI と per-\(k\) EI の中間的な基準を検討する．
+  \item paired difference や統計検定で，\(\beta_{\mathrm{EI}}\) の改善が安定しているか確認する．
+\end{itemize}
+
+\section{まとめ}
+
+\texttt{bo\_current} と \(\beta_{\mathrm{EI}}\) の違いは，
+EI の基準値をどこから取るかにある．
+
+\[
+\begin{aligned}
+\texttt{bo\_current}:&
+\quad
+r_{\mathrm{best}}=r_{\mathrm{best}}^{(k)}
+=
+\max\{r_i\mid k_i=k\},
+\\
+\beta_{\mathrm{EI}}:&
+\quad
+r_{\mathrm{best}}=r_{\mathrm{best}}^{\mathrm{global}}
+=
+\max_i r_i.
+\end{aligned}
+\]
+
+\texttt{bo\_current} は，各 \(k\) の中での改善を見やすい．
+\(\beta_{\mathrm{EI}}\) は，全 \(k\) 共通の基準で候補を比較しやすい．
+
+今回の seed 100 実験では，Friedman-I において
+\(\beta_{\mathrm{EI}}\) が平均 HV で最も良かったため，
+次段階の候補として優先的に検討する価値がある．
+ただし，差は小さいため，
+今後は seed 内差分，統計検定，\(k\) ごとの報酬分布分析を行い，
+\(\beta_{\mathrm{EI}}\) の妥当性をより慎重に確認する必要がある．
+
+\end{document}

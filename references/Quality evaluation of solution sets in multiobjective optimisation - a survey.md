@@ -1,0 +1,28 @@
+# Quality evaluation of solution sets in multiobjective optimisation: a survey
+
+- Reference ID: [R16]
+- Status: Adopted
+- Category: C
+- Citation: Li, M., & Yao, X. (2019). *Quality evaluation of solution sets in multiobjective optimisation: a survey*. ACM Computing Surveys, 52(2), Article 26. https://doi.org/10.1145/3300148
+- DOI: 10.1145/3300148
+- URL: https://research.birmingham.ac.uk/en/publications/quality-evaluation-of-solution-sets-in-multiobjective-optimisatio
+- Elsevier URL:
+- Source checked: University of Birmingham publication page and accepted manuscript metadata.
+- Access: accepted author manuscript available / metadata checked
+- Local PDF:
+- Citation signal: University of Birmingham page listed 71 Scopus citations when checked on 2026-05-20.
+- Why this paper matters:
+  - Broad survey focused specifically on quality evaluation of multiobjective solution sets.
+  - Summarizes and categorizes 100 quality indicators and discusses what quality aspects they reflect.
+  - Older than the preferred 2020 threshold, but central enough to keep as a core evaluation-method reference.
+- Information used in this project:
+  - Use as a methodological source for separating convergence, diversity/spread, coverage, cardinality, and preference-aware evaluation of Pareto archives.
+- Related note sections:
+  - notes/research_note.md 10.2
+  - Future evaluation protocol for Pareto archive analysis
+- Manual download queries:
+  - Complete title: Quality evaluation of solution sets in multiobjective optimisation: a survey
+  - Author year query: Li Yao 2019 quality evaluation solution sets multiobjective optimisation survey
+  - DOI: 10.1145/3300148
+- Next action:
+  - Use this as the fallback comprehensive survey if newer sources do not define a needed indicator clearly.

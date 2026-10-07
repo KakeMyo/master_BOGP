@@ -1,0 +1,175 @@
+% !TEX program = lualatex
+\documentclass[a4paper,11pt]{ltjsarticle}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\geometry{margin=24mm}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc}
+
+\title{進捗報告メモ\\多目的GPにおけるBO制御実装の改善}
+\author{}
+\date{2026年5月26日}
+
+\newcommand{\HV}{\mathrm{HV}}
+\newcommand{\ND}{\mathrm{ND}}
+
+\begin{document}
+\maketitle
+
+\section{研究の狙い}
+
+本研究では，多目的遺伝的プログラミング (MOGP) において，
+交叉率 \(p_c\)，突然変異率 \(p_m\)，更新周期 \(k\) を固定せず，
+現在の探索状態に応じてベイズ最適化 (BO) で逐次決定する手法を検討している．
+目的は，最終的に良い Pareto front を得ることと，探索中の多様性を維持することである．
+
+\begin{figure}[htbp]
+\centering
+\resizebox{0.93\linewidth}{!}{%
+\begin{tikzpicture}[
+  node distance=10mm and 14mm,
+  block/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=38mm, minimum height=9mm, fill=blue!6},
+  bo/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=38mm, minimum height=9mm, fill=orange!12},
+  gp/.style={rectangle, rounded corners=2pt, draw, align=center, minimum width=38mm, minimum height=9mm, fill=green!10},
+  arrow/.style={-Latex, thick}
+]
+\node[block] (state) {GP状態\\ HV, 多様性, 木サイズ};
+\node[bo, right=of state] (controller) {BO制御器\\ \(p_c,p_m,k\) を提案};
+\node[gp, below=of controller] (plant) {多目的GP\\ \(k\) 世代実行};
+\node[block, left=of plant] (reward) {報酬計算\\ HV改善 + 多様性};
+\draw[arrow] (state) -- (controller);
+\draw[arrow] (controller) -- (plant);
+\draw[arrow] (plant) -- (reward);
+\draw[arrow] (reward) -- (state);
+\end{tikzpicture}
+}
+\caption{提案手法の基本構造}
+\end{figure}
+
+\section{実装改善の流れ}
+
+ここまでの実装は，次の 3 段階で改善してきた．
+
+\begin{table}[htbp]
+\centering
+\caption{実装バージョンの整理}
+\begin{tabular}{lll}
+\toprule
+版 & 目的 & 改善内容 \\
+\midrule
+ver1 & まず動かす & BO 制御 GP と普通 GP を比較 \\
+ver2 & 評価を正確にする & archive の重複除去と世代別ログを追加 \\
+ver2\_b & 本格実験に備える & archive 評価と population 観測を分離 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+ver1 では，提案手法が実際に動き，普通 GP より良い傾向があるかを確認した．
+しかし，archive に重複が含まれ，候補解数を過大に見積もる可能性があった．
+
+そこで ver2 では，同じ目的値・同じ構造の個体を重複除去し，
+unique objective，unique structure，unique pair を記録するようにした．
+
+さらに ver2\_b では，次のように役割を分けた．
+\[
+\begin{array}{ll}
+\text{archive} &: \text{HV，報酬，最終 Pareto front の評価}\\
+\text{population} &: \text{現在の多様性，平均木サイズなどの状態観測}
+\end{array}
+\]
+
+archive 更新は
+\[
+A_{g+1}=\ND(A_g\cup P_g\cup Q_g)
+\]
+として，offspring に一度現れた良い非劣解も保存できるようにした．
+
+\section{主な結果}
+
+\subsection{テンプレート問題}
+
+テンプレート問題では，提案手法が普通 GP より高い HV と Diversity を示した．
+ver2\_b では，提案手法の最終 archive HV は 0.989710，
+普通 GP は 0.979405 であった．
+また，Diversity も提案手法の方が高かった．
+
+\begin{table}[htbp]
+\centering
+\caption{テンプレート問題の最終結果}
+\begin{tabular}{llll}
+\toprule
+手法 & archive HV & Diversity & archive size \\
+\midrule
+提案手法 ver2\_b & 0.989710 & 0.592879 & 6 \\
+普通 GP & 0.979405 & 0.347826 & 2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.88\linewidth]{outputs/template_plain_vs_bogp_test_ver2_b1/20260520_173956/archive_population_hv_diversity_comparison.png}
+\caption{テンプレート問題: archive HV，population HV，population diversity}
+\end{figure}
+
+\subsection{構造探索問題}
+
+構造探索問題でも，提案手法は普通 GP よりわずかに高い HV と Diversity を示した．
+ただし，HV は早期に高い値へ到達しており，問題設定としては少し簡単すぎる可能性がある．
+
+\begin{table}[htbp]
+\centering
+\caption{構造探索問題の最終結果}
+\begin{tabular}{lllll}
+\toprule
+手法 & archive HV & Diversity & archive size & unique structure \\
+\midrule
+提案手法 ver2\_b2 & 0.999546 & 0.783334 & 10 & 10 \\
+普通 GP & 0.999533 & 0.750047 & 7 & 7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.88\linewidth]{outputs/structural_plain_vs_bogp_test_ver2_b2/20260520_172026/archive_population_hv_diversity_comparison.png}
+\caption{構造探索問題: archive HV，population HV，population diversity}
+\end{figure}
+
+\section{分かったこと}
+
+\begin{enumerate}[leftmargin=3em]
+  \item 提案手法は，小規模実験では普通 GP より HV と Diversity を高く保つ傾向がある．
+  \item ver1 の archive size は重複を含んでおり，実質的な Pareto 候補数としては過大であった．
+  \item ver2 以降では，unique objective / structure / pair を記録することで，結果をより正確に説明できるようになった．
+  \item ver2\_b では，archive を成果評価，population を状態観測に使う整理ができた．
+  \item 構造探索では，パラメータ値込みの構造キーを使うと，同じ目的値でも異なる設計候補を保持できる．
+\end{enumerate}
+
+\section{今後の課題}
+
+今後は，小規模な動作確認から本格実験へ進む．
+特に次の点が重要である．
+
+\begin{itemize}[leftmargin=3em]
+  \item 複数 seed で実験し，平均・標準偏差を確認する．
+  \item 構造探索問題の HV 参照点や正規化範囲を見直す．
+  \item 比較対象を固定率 GP だけでなく，複数固定率，手設計スケジュール，非文脈 BO に広げる．
+  \item 多様性項なし，\(k\) 制御なし，構造キー b1/b2 などの ablation を行う．
+  \item 最終的には HV，Diversity，unique objective，unique structure，制御回数をまとめて評価する．
+\end{itemize}
+
+\section{まとめ}
+
+ここまでで，提案手法の最小実装から，評価基盤を整えた ver2\_b まで進めた．
+現時点では，提案手法は普通 GP より良い傾向を示しているが，
+構造探索問題では HV が飽和しやすく，より厳密な比較には本格実験が必要である．
+次の段階では，複数 seed と比較手法を揃え，提案手法の有効性を検証していく．
+
+\end{document}

@@ -1,0 +1,288 @@
+% !TEX program = lualatex
+\documentclass[a4paper,11pt]{ltjsarticle}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\geometry{margin=24mm}
+
+\title{Seminar 用本実験結果メモ\\
+\large Friedman-I における \texttt{bo\_current} の評価}
+\author{}
+\date{2026年6月2日}
+
+\newcommand{\HV}{\mathrm{HV}}
+
+\begin{document}
+\maketitle
+
+\section{目的}
+
+本メモは，Seminar 発表に向けた本実験 for Seminar として，
+現時点で採用する方針である \texttt{bo\_current} を
+Friedman-I シンボリック回帰問題に適用した結果をまとめるものである．
+
+本研究の提案法は，多目的 GP の世代状態を観測し，
+文脈付き BO により交叉率 \(p_c\)，突然変異率 \(p_m\)，
+更新周期 \(k\) を逐次決定する閉ループ制御手法である．
+今回の Seminar 用実験では，後続検討候補である
+\(\beta_{\mathrm{EI}}\) ではなく，
+既定の \texttt{bo\_current} 方針を本線として用いる．
+
+\section{対象問題}
+
+対象問題は Friedman-I 型のシンボリック回帰である．
+入力変数を \(x_1,\ldots,x_5\) とすると，目標関数は
+\[
+  y =
+  10\sin(\pi x_1 x_2)
+  +20(x_3-0.5)^2
+  +10x_4
+  +5x_5
+\]
+で与えられる．
+各入力は一様分布 \(x_i\sim U(0,1)\) から生成し，
+訓練点数は 200，テスト点数は 200 とした．
+
+GP の目的関数は 2 目的である．
+第1目的は訓練データに対する正規化 RMSE
+（training NRMSE）の最小化であり，
+第2目的は式木サイズの最小化である．
+したがって本実験では，精度の良さと式の簡潔さのトレードオフを
+Pareto front として評価する．
+
+\section{比較条件}
+
+比較対象は，固定率 GP 3 条件と，提案法 \texttt{bo\_current} である．
+全手法で同じ多目的 GP エンジンを用い，違いは
+交叉率・突然変異率・更新周期の決定方法のみに限定した．
+
+\begin{table}[htbp]
+\centering
+\caption{比較した制御条件}
+\begin{tabular}{lll}
+\toprule
+手法 & 設定 & 位置づけ \\
+\midrule
+\texttt{plain\_fixed\_standard}
+& \(p_c=0.80,\ p_m=0.05\)
+& 標準的な固定率 GP \\
+\texttt{plain\_fixed\_high\_mutation}
+& \(p_c=0.70,\ p_m=0.20\)
+& 突然変異を強めた固定率 GP \\
+\texttt{plain\_fixed\_high\_crossover}
+& \(p_c=0.90,\ p_m=0.05\)
+& 交叉を強めた固定率 GP \\
+\texttt{bogp\_current}
+& \(p_c,p_m,k\) を BO で逐次決定
+& 提案法の現行版 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\texttt{bo\_current} では，
+\[
+  k\in\{1,3,5\}
+\]
+を候補とし，\(k\) ごとに GP surrogate を持つ．
+EI の改善基準値は各 \(k\) 内の過去最高報酬であり，
+これは \texttt{per-k} EI と解釈できる．
+すなわち，今回の \texttt{bo\_current} は
+\[
+  r_{\mathrm{best}}^{(k)}
+  =
+  \max\{r_i\mid k_i=k\}
+\]
+を用いて EI を計算する．
+
+\section{実験条件}
+
+実験条件を表\ref{tab:experiment-setting}に示す．
+各手法は seed 0 から 99 までの 100 試行で評価した．
+
+\begin{table}[htbp]
+\centering
+\caption{Seminar 用本実験の条件}
+\label{tab:experiment-setting}
+\begin{tabular}{ll}
+\toprule
+項目 & 設定 \\
+\midrule
+対象問題 & Friedman-I symbolic regression \\
+seed & \(0,\ldots,99\) \\
+集団サイズ & 24 \\
+世代数 & 30 \\
+評価回数 & 720 / run \\
+目的数 & 2 \\
+目的関数 & training NRMSE，tree size \\
+archive key & topology + node value \\
+HV 参照点 & \((1.0,1.0)\) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{結果}
+
+\subsection{最終 HV と多様性}
+
+表\ref{tab:final-results}に，100 seed における final archive HV，
+final diversity，archive size の平均と標準偏差を示す．
+
+\begin{table}[htbp]
+\centering
+\caption{Friedman-I における最終指標}
+\label{tab:final-results}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrrr}
+\toprule
+手法 & HV 平均 & HV 標準偏差 & 多様性平均 & 多様性標準偏差 & archive size 平均 \\
+\midrule
+\texttt{plain\_fixed\_standard}
+& 0.757001 & 0.076593 & 0.601648 & 0.126511 & 19.15 \\
+\texttt{plain\_fixed\_high\_mutation}
+& 0.776600 & 0.051848 & 0.609492 & 0.113961 & 14.00 \\
+\texttt{plain\_fixed\_high\_crossover}
+& 0.764665 & 0.072106 & 0.615219 & 0.102404 & 19.30 \\
+\texttt{bogp\_current}
+& 0.773081 & 0.055720 & 0.603050 & 0.123937 & 15.72 \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+図\ref{fig:final-hv-diversity}に，final archive HV と final diversity を
+平均 \(\pm\) 標準偏差で示す．
+\texttt{bogp\_current} は標準固定率 GP および高交叉固定率 GP よりも
+HV 平均が高い．
+一方で，高突然変異固定率 GP が HV 平均で最も高く，
+\texttt{bogp\_current} はそれにわずかに届いていない．
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{outputs/seminar_bo_current/sr_alpha_friedman/seminar_bo_current_seed100_20260602/seminar_final_hv_diversity.png}
+  \caption{final archive HV と final diversity の比較}
+  \label{fig:final-hv-diversity}
+\end{figure}
+
+\subsection{seed 内差分}
+
+表\ref{tab:paired-diff}に，同じ seed 内で
+\texttt{bogp\_current} と各固定率 GP の final HV 差分を取った結果を示す．
+差分は
+\[
+  \Delta \HV =
+  \HV_{\texttt{bogp\_current}}
+  -
+  \HV_{\texttt{baseline}}
+\]
+として定義した．
+
+\begin{table}[htbp]
+\centering
+\caption{\texttt{bogp\_current} と固定率 GP の seed 内 final HV 差分}
+\label{tab:paired-diff}
+\begin{tabular}{lrrrrr}
+\toprule
+比較 & 差分平均 & 差分標準偏差 & win & tie & loss \\
+\midrule
+\texttt{bogp\_current} - standard
+& 0.016080 & 0.089679 & 64 & 4 & 32 \\
+\texttt{bogp\_current} - high mutation
+& -0.003519 & 0.068742 & 40 & 4 & 56 \\
+\texttt{bogp\_current} - high crossover
+& 0.008416 & 0.088748 & 54 & 2 & 44 \\
+\texttt{bogp\_current} - best fixed per seed
+& -0.020092 & 0.053069 & 21 & 1 & 78 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+図\ref{fig:paired-diff}は，表\ref{tab:paired-diff}の差分を図示したものである．
+\texttt{bogp\_current} は標準固定率 GP に対して平均差が正であり，
+100 seed 中 64 seed で勝っている．
+しかし，高突然変異固定率 GP に対しては平均差が負であり，
+best fixed per seed と比較すると 21 seed でのみ勝っている．
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.92\linewidth]{outputs/seminar_bo_current/sr_alpha_friedman/seminar_bo_current_seed100_20260602/seminar_paired_hv_difference.png}
+  \caption{\texttt{bogp\_current} と固定率 GP の seed 内 final HV 差分}
+  \label{fig:paired-diff}
+\end{figure}
+
+\subsection{HV 分布}
+
+図\ref{fig:hv-boxplot}に，100 seed における final archive HV の分布を示す．
+中央値を見ると，各手法の差は大きくない．
+一方で，標準固定率 GP と高交叉固定率 GP では低 HV 側の外れ値が見られる．
+\texttt{bogp\_current} も外れ値を完全には避けられていないが，
+分布の中心は標準固定率 GP より高い位置にある．
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.92\linewidth]{outputs/seminar_bo_current/sr_alpha_friedman/seminar_bo_current_seed100_20260602/seminar_final_hv_boxplot.png}
+  \caption{100 seed における final archive HV の分布}
+  \label{fig:hv-boxplot}
+\end{figure}
+
+\subsection{\texorpdfstring{\(k\)}{k} の選択傾向}
+
+\texttt{bogp\_current} における更新周期 \(k\) の選択回数を図\ref{fig:k-counts}に示す．
+100 seed 全体での選択回数は
+\[
+  k=1:491,\quad
+  k=3:333,\quad
+  k=5:302
+\]
+であった．
+平均制御更新回数は 11.26 回であり，毎世代更新の 30 回より少ない．
+これは，\texttt{bo\_current} が毎世代細かく制御するのではなく，
+必要に応じて数世代単位で制御入力を保持する挙動を示している．
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.62\linewidth]{outputs/seminar_bo_current/sr_alpha_friedman/seminar_bo_current_seed100_20260602/seminar_k_selection_counts.png}
+  \caption{\texttt{bogp\_current} における更新周期 \(k\) の選択回数}
+  \label{fig:k-counts}
+\end{figure}
+
+\section{考察}
+
+今回の Friedman-I 実験から，\texttt{bo\_current} は
+標準固定率 GP に対して final archive HV を改善する傾向を示した．
+これは，GP の世代状態を観測して \(p_c,p_m,k\) を切り替える
+閉ループ制御の枠組みが，少なくとも標準的な固定率設定の単純な置き換えとして
+動作していることを示す結果である．
+
+一方で，高突然変異固定率 GP が HV 平均で最良であったことは重要である．
+この結果は，現行の \texttt{bo\_current} が
+「十分に調整された固定率 GP」を安定して上回る段階にはまだ達していないことを示している．
+したがって，Seminar では
+「提案法が全 baseline に勝った」と主張するのではなく，
+次のように位置づけるのが妥当である．
+
+\begin{itemize}
+  \item 提案法の閉ループ制御は実装上動作しており，標準固定率 GP より良い傾向を示した．
+  \item しかし，高突然変異固定率 GP にはわずかに届かず，報酬設計や BO 制御器の改善余地が残る．
+  \item \(k\) を制御対象に含めることで，毎世代更新ではなく平均 11.26 回の制御更新で進化を進められた．
+  \item 今後は，固定率のグリッド比較，報酬内訳分析，\(k\) ごとの報酬分布分析を行い，制御方策を改良する必要がある．
+\end{itemize}
+
+\section{Seminar 発表での説明方針}
+
+Seminar では，結果を過度に強く主張するよりも，
+「提案法の枠組みが動いたこと」と
+「現行版の課題が明確になったこと」を主な成果として説明する．
+特に，今回の結果は次のストーリーで説明しやすい．
+
+\begin{enumerate}
+  \item 固定率 GP では，どの \(p_c,p_m\) が良いかは問題依存である．
+  \item Friedman-I では，高突然変異固定率が強い baseline になった．
+  \item \texttt{bo\_current} は標準固定率より HV を改善したが，最良固定率には届かなかった．
+  \item これは，閉ループ制御の方向性は妥当だが，報酬設計や BO の比較基準をさらに詰める必要があることを示す．
+  \item Seminar 後には，\(\beta_{\mathrm{EI}}\) などの EI 改良案，および \(k\) の扱いを再検討する．
+\end{enumerate}
+
+\end{document}

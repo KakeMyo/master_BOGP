@@ -1,0 +1,29 @@
+# The Hypervolume Indicator: Computational Problems and Algorithms
+
+- Reference ID: [R17]
+- Status: Adopted
+- Category: B/C
+- Citation: Guerreiro, A. P., Fonseca, C. M., & Paquete, L. (2021). *The Hypervolume Indicator: Computational Problems and Algorithms*. ACM Computing Surveys, 54(6), Article 119, 1-42. https://doi.org/10.1145/3453474
+- DOI: 10.1145/3453474
+- URL: https://arxiv.org/abs/2005.00515
+- Elsevier URL:
+- Source checked: arXiv record, DBLP metadata, and hypervolume.org bibliography.
+- Access: arXiv preprint available / ACM metadata checked
+- Local PDF:
+- Citation signal:
+- Why this paper matters:
+  - Hypervolume is the main scalar quality indicator currently used in this project.
+  - The paper reviews computational problems and algorithms for hypervolume calculation.
+  - It also motivates why HV is widely accepted, especially its monotonicity with respect to set dominance.
+- Information used in this project:
+  - Supports the use of exact 2D HV for archive-level evaluation.
+  - Reminds that reference-point choice and objective normalization must be fixed when comparing methods.
+- Related note sections:
+  - notes/research_note.md 10.2
+  - src/bogp/test_v1_hypervolume.py
+- Manual download queries:
+  - Complete title: The Hypervolume Indicator: Computational Problems and Algorithms
+  - Author year query: Guerreiro Fonseca Paquete 2021 hypervolume indicator computational problems algorithms
+  - DOI: 10.1145/3453474
+- Next action:
+  - Use for the method/evaluation section when explaining hypervolume and reference-point sensitivity.

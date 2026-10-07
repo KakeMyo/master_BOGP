@@ -1,0 +1,29 @@
+# Performance indicators in multiobjective optimization
+
+- Reference ID: [R15]
+- Status: Manual download candidate
+- Category: C/D
+- Citation: Audet, C., Bigeon, J., Cartier, D., Le Digabel, S., & Salomon, L. (2021). *Performance indicators in multiobjective optimization*. European Journal of Operational Research, 292(2), 397-422. https://doi.org/10.1016/j.ejor.2020.11.016
+- DOI: 10.1016/j.ejor.2020.11.016
+- URL: https://www.sciencedirect.com/science/article/pii/S0377221720309620
+- Elsevier URL: https://www.sciencedirect.com/science/article/abs/pii/S0377221720309620
+- Source checked: ScienceDirect abstract and section snippets.
+- Access: Elsevier manual download candidate / metadata and abstract checked
+- Local PDF:
+- Citation signal:
+- Why this paper matters:
+  - Reviews performance indicators for Pareto front approximation quality.
+  - Classifies indicators into cardinality, convergence, distribution/spread, and combined categories.
+  - Useful for deciding which metrics to report beyond final hypervolume.
+- Information used in this project:
+  - Performance assessment of Pareto archives should distinguish solution count, closeness to the front, spread/uniformity, and combined quality.
+  - Hypervolume is a strong default indicator, but should be complemented when distribution or cardinality is central to the claim.
+- Related note sections:
+  - notes/research_note.md 10.2
+  - Future evaluation protocol for Pareto archive analysis
+- Manual download queries:
+  - Complete title: Performance indicators in multiobjective optimization
+  - Author year query: Audet Bigeon Cartier Le Digabel Salomon 2021 performance indicators multiobjective optimization
+  - DOI: 10.1016/j.ejor.2020.11.016
+- Next action:
+  - Manually obtain the Elsevier full text if detailed indicator definitions are needed for the paper.

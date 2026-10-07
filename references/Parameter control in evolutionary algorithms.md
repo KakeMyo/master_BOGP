@@ -1,0 +1,35 @@
+# Parameter control in evolutionary algorithms
+
+- Reference ID: [R21]
+- Status: Adopted
+- Category: A
+- Citation: Eiben, A. E., Hinterding, R., & Michalewicz, Z. (1999). *Parameter control in evolutionary algorithms*. IEEE Transactions on Evolutionary Computation, 3(2), 124-141. https://doi.org/10.1109/4235.771166
+- DOI: 10.1109/4235.771166
+- URL: https://cir.nii.ac.jp/crid/1364233268510837248
+- Elsevier URL:
+- Source checked:
+  - CiNii Research
+  - IEEE DOI metadata
+  - University-hosted PDF
+- Access: PDF saved
+- Local PDF: `references/Parameter control in evolutionary algorithms.pdf`
+- Citation signal:
+  - CiNii entry available
+  - Foundational IEEE Transactions survey on evolutionary algorithm parameter control
+- Why this paper matters:
+  - It distinguishes parameter tuning before a run from parameter control during a run.
+  - It provides the classical taxonomy of deterministic, adaptive, and self-adaptive control.
+  - It explicitly treats mutation rate, crossover rate, and other EA parameters as quantities that may be changed during search.
+- Information used in this project:
+  - Supports the claim that fixed parameter values are often insufficient because good values can depend on the problem and the current search stage.
+  - Supports positioning the proposed method as parameter control rather than one-time parameter tuning.
+  - Supports the wording in the introduction that dynamic adjustment of crossover and mutation rates is a natural alternative to fixed rates.
+- Related note sections:
+  - `notes/paper_8page_2col_draft_expanded.tex` section 1, introduction
+  - `notes/research_note.md` reference section
+- Manual download queries:
+  - Complete title: `Parameter control in evolutionary algorithms`
+  - Author year query: `Eiben Hinterding Michalewicz 1999 Parameter control in evolutionary algorithms`
+  - DOI: `10.1109/4235.771166`
+- Next action:
+  - Use as the main citation for the general claim that parameter control is an established research direction in evolutionary computation.

@@ -1,0 +1,35 @@
+# A systematic literature review of adaptive parameter control methods for evolutionary algorithms
+
+- Reference ID: [R23]
+- Status: Adopted
+- Category: A/D
+- Citation: Aleti, A., & Moser, I. (2016). *A systematic literature review of adaptive parameter control methods for evolutionary algorithms*. ACM Computing Surveys, 49(3), Article 56. https://doi.org/10.1145/2996355
+- DOI: 10.1145/2996355
+- URL: https://research.monash.edu/en/publications/a-systematic-literature-review-of-adaptive-parameter-control-meth/
+- Elsevier URL:
+- Source checked:
+  - Monash University publication page
+  - CiNii Research
+  - ACM DOI metadata
+- Access: PDF saved / full text checked
+- Local PDF: `references/A systematic literature review of adaptive parameter control methods for evolutionary algorithms.pdf`
+- Citation signal:
+  - ACM Computing Surveys article
+  - Monash page reports Scopus citation signal
+- Why this paper matters:
+  - It systematically reviews adaptive parameter control methods rather than treating parameter control as isolated examples.
+  - It highlights mutation rate, crossover rate, and population size as typical adjustable parameters in evolutionary algorithms.
+  - It states that parameter values can be problem-specific and may differ across optimization stages.
+- Information used in this project:
+  - Supports the introduction claim that fixed rates are not generally sufficient and that feedback-based adaptation is an established response.
+  - Supports the proposed method's use of observed search state as feedback for deciding operator rates.
+  - Helps frame the BO controller as one possible adaptive parameter control mechanism.
+- Related note sections:
+  - `notes/paper_8page_2col_draft_expanded.tex` section 1, introduction
+  - `notes/research_note.md` reference section
+- Manual download queries:
+  - Complete title: `A systematic literature review of adaptive parameter control methods for evolutionary algorithms`
+  - Author year query: `Aleti Moser 2016 adaptive parameter control evolutionary algorithms`
+  - DOI: `10.1145/2996355`
+- Next action:
+  - Use as a direct supporting citation for adaptive parameter control, problem-specific parameter values, stage-dependent parameter values, and feedback-based parameter adjustment.

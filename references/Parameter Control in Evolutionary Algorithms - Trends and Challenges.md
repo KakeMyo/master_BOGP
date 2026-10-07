@@ -1,0 +1,35 @@
+# Parameter Control in Evolutionary Algorithms - Trends and Challenges
+
+- Reference ID: [R22]
+- Status: Adopted
+- Category: A/D
+- Citation: Karafotias, G., Hoogendoorn, M., & Eiben, A. E. (2015). *Parameter Control in Evolutionary Algorithms: Trends and Challenges*. IEEE Transactions on Evolutionary Computation, 19(2), 167-187. https://doi.org/10.1109/TEVC.2014.2308294
+- DOI: 10.1109/TEVC.2014.2308294
+- URL: https://research.vu.nl/en/publications/parameter-control-in-evolutionary-algorithms-trends-and-challenge
+- Elsevier URL:
+- Source checked:
+  - Vrije Universiteit Amsterdam publication page
+  - DBLP
+  - DOI metadata
+- Access: PDF saved / full text checked
+- Local PDF: `references/Parameter Control in Evolutionary Algorithms - Trends and Challenges.pdf`
+- Citation signal:
+  - Peer-reviewed IEEE Transactions article
+  - Follow-up survey more than a decade after Eiben et al. (1999)
+- Why this paper matters:
+  - It updates the parameter control literature and summarizes trends and methodological challenges.
+  - It discusses parameter control by EA component, including variation operators and runtime adaptation.
+  - It is useful for explaining that the proposed work belongs to a broader and still active research stream.
+- Information used in this project:
+  - Supports the introduction claim that different search stages may require different parameter values.
+  - Supports the discussion that dynamic control should be evaluated carefully because parameter control methods have methodological challenges.
+  - Helps distinguish the proposed closed-loop BO controller from hand-designed schedules and ordinary parameter tuning.
+- Related note sections:
+  - `notes/paper_8page_2col_draft_expanded.tex` section 1, introduction
+  - `notes/research_note.md` reference section
+- Manual download queries:
+  - Complete title: `Parameter Control in Evolutionary Algorithms: Trends and Challenges`
+  - Author year query: `Karafotias Hoogendoorn Eiben 2015 parameter control trends challenges`
+  - DOI: `10.1109/TEVC.2014.2308294`
+- Next action:
+  - Use as a direct supporting reference in the introduction for fixed-rate limitations, runtime parameter control, and the need to monitor EA behavior descriptors.

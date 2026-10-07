@@ -1,0 +1,31 @@
+# Evolvability Degeneration in Multi-Objective Genetic Programming for Symbolic Regression
+
+- Reference ID: [R30]
+- Status: Adopted
+- Category: A/B/C
+- Citation: Liu, D., Virgolin, M., Alderliesten, T., & Bosman, P. A. N. (2022). *Evolvability Degeneration in Multi-Objective Genetic Programming for Symbolic Regression*. Proceedings of the Genetic and Evolutionary Computation Conference (GECCO '22), 973–981. https://doi.org/10.1145/3512290.3528787
+- DOI: 10.1145/3512290.3528787
+- URL: https://arxiv.org/abs/2202.06983
+- Elsevier URL:
+- Source checked: ACM DOI record, arXiv, TU Delft institutional repository, full PDF.
+- Access: OA full PDF saved and inspected
+- Local PDF: `references/Evolvability Degeneration in Multi-Objective Genetic Programming for Symbolic Regression.pdf`
+- Citation signal:
+  - Citation count was not used for adoption.
+- Why this paper matters:
+  - It studies accuracy–complexity MOGP with NSGA-II and identifies early over-reproduction of small programs as a cause of reduced evolvability.
+  - The observed mechanism is directly related to this project's context variables: hypervolume change, structural diversity, mean tree size, and stagnation.
+  - It reports a reproducible suite of public regression datasets and full experimental settings, including split, scaling, size cap, primitive set, and repetitions.
+- Information used in this project:
+  - Airfoil is the first real-data pilot candidate because the paper directly visualizes early stagnation and continued improvement under evolvability-preserving variants.
+  - Concrete and Energy are public confirmatory candidates; Dow Chemical and Tower are held as higher-cost or provenance-sensitive stress candidates.
+  - The paper does not prove that contextual BO will work; it provides a mechanism-rich setting in which operator control can be tested.
+- Related note sections:
+  - `notes/thesis_long_horizon_problem_setting_options.md`
+  - `reference_candidates/problem_settings/long_horizon_mogp_search_log.md`
+- Manual download queries:
+  - Complete title: `Evolvability Degeneration in Multi-Objective Genetic Programming for Symbolic Regression`
+  - Author year query: `Liu Virgolin Alderliesten Bosman 2022 evolvability degeneration`
+  - DOI: `10.1145/3512290.3528787`
+- Next action:
+  - Implement the public-data adapter, hard size cap, fixed split manifests, and archive-expression/test-metric export before running the screen.

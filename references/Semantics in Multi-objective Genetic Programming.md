@@ -1,0 +1,29 @@
+# Semantics in Multi-objective Genetic Programming
+
+- Reference ID: [R18]
+- Status: Manual download candidate
+- Category: B/C
+- Citation: Galvan, E., et al. (2022). *Semantics in Multi-objective Genetic Programming*. Applied Soft Computing, 115, Article 108143. https://doi.org/10.1016/j.asoc.2021.108143
+- DOI: 10.1016/j.asoc.2021.108143
+- URL: https://www.sciencedirect.com/science/article/pii/S1568494621010139
+- Elsevier URL: https://www.sciencedirect.com/science/article/pii/S1568494621010139
+- Source checked: ScienceDirect abstract, highlights, and introduction snippets.
+- Access: Elsevier manual download candidate / metadata and abstract checked
+- Local PDF:
+- Citation signal:
+- Why this paper matters:
+  - Recent multiobjective GP paper that evaluates Pareto approximations using average hypervolume and statistical significance.
+  - Compares semantic diversity mechanisms against NSGA-II and SPEA2.
+  - Directly relevant because this project also uses GP, Pareto archives, diversity, and HV.
+- Information used in this project:
+  - Use as an applied example for reporting average HV over repeated runs and testing whether front-quality improvements are statistically significant.
+  - Useful comparison point for discussing semantic/structural diversity in multiobjective GP.
+- Related note sections:
+  - notes/research_note.md 10.2
+  - Future experiments on repeated-run Pareto archive quality
+- Manual download queries:
+  - Complete title: Semantics in Multi-objective Genetic Programming
+  - Author year query: Galvan 2022 semantics in multi-objective genetic programming hypervolume
+  - DOI: 10.1016/j.asoc.2021.108143
+- Next action:
+  - Manually obtain the full text if detailed experimental design, statistical tests, or benchmark settings are needed.

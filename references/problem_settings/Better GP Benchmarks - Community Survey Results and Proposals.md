@@ -1,0 +1,31 @@
+# Better GP Benchmarks: Community Survey Results and Proposals
+
+- Reference ID: [R29]
+- Status: Adopted
+- Category: C/D
+- Citation: White, D. R., McDermott, J., Castelli, M., Manzoni, L., Goldman, B. W., Kronberger, G., Jaśkowski, W., O'Reilly, U.-M., & Luke, S. (2013). *Better GP Benchmarks: Community Survey Results and Proposals*. Genetic Programming and Evolvable Machines, 14(1), 3–29. https://doi.org/10.1007/s10710-012-9177-2
+- DOI: 10.1007/s10710-012-9177-2
+- URL: https://gpbenchmarks.org/wp-content/uploads/2019/08/GP-Benchmarks-GPEM-2013-preprint-correction-v2.pdf
+- Elsevier URL:
+- Source checked: Springer DOI record, GP Benchmarks author/community site, full preprint PDF.
+- Access: Author/community-hosted full PDF saved and inspected
+- Local PDF: `references/Better GP Benchmarks - Community Survey Results and Proposals.pdf`
+- Citation signal:
+  - Citation count was not used for adoption.
+- Why this paper matters:
+  - It gives a community-derived critique of easy or poorly specified GP benchmarks and proposes more robust symbolic-regression alternatives.
+  - It provides exact targets, dimensionality, and training/test sampling specifications for candidate problems including Keijzer-6, Korns-12, and Vladislavleva-4.
+  - Its warnings against easy polynomial-only suites and benchmark cherry-picking directly apply to selecting a problem after the current Friedman experiment saturated early.
+- Information used in this project:
+  - Retain easy problems only as calibration or negative controls rather than as the sole thesis benchmark.
+  - Screen difficult candidates without using the proposed controller's win/loss outcome.
+  - Use Vladislavleva-4 as a difficult five-dimensional extrapolation candidate and Korns-12 as a feature-selection/irrelevant-variable stress candidate.
+- Related note sections:
+  - `notes/thesis_long_horizon_problem_setting_options.md`
+  - `reference_candidates/problem_settings/long_horizon_mogp_search_log.md`
+- Manual download queries:
+  - Complete title: `Better GP Benchmarks: Community Survey Results and Proposals`
+  - Author year query: `White McDermott Castelli 2013 Better GP Benchmarks`
+  - DOI: `10.1007/s10710-012-9177-2`
+- Next action:
+  - Implement canonical data generators only after the pilot suite and primitive sets are frozen.

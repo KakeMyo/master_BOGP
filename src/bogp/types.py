@@ -10,9 +10,10 @@ from .context_metrics import ContextMetricConfig, build_context_vector
 class ControlInput:
     crossover_rate: float
     mutation_rate: float
+    update_period: int = 1
 
-    def as_tuple(self) -> Tuple[float, float]:
-        return (self.crossover_rate, self.mutation_rate)
+    def as_tuple(self) -> Tuple[float, float, int]:
+        return (self.crossover_rate, self.mutation_rate, self.update_period)
 
 
 @dataclass(frozen=True)
@@ -62,7 +63,11 @@ class RateBounds:
             if crossover + mutation > self.max_total_rate:
                 crossover = max(self.crossover_min, self.max_total_rate - mutation)
 
-        return ControlInput(crossover_rate=crossover, mutation_rate=mutation)
+        return ControlInput(
+            crossover_rate=crossover,
+            mutation_rate=mutation,
+            update_period=max(1, int(control.update_period)),
+        )
 
 
 @dataclass(frozen=True)
@@ -112,3 +117,4 @@ class IntervalResult:
     start_state: GPStateSnapshot
     end_state: GPStateSnapshot
     evaluations: int
+    diversity_values: Tuple[float, ...] = ()

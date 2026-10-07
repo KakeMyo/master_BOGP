@@ -1,0 +1,46 @@
+We model the genetic programming system as a plant and the outer Bayesian
+optimization loop as a controller. At control step $\ell$, the controller
+selects
+%
+\begin{equation}
+u_{\ell} = (p_{c,\ell}, p_{m,\ell}, k_{\ell}),
+\end{equation}
+%
+where $p_{c,\ell}$ is the crossover rate, $p_{m,\ell}$ is the mutation
+rate, and $k_{\ell}$ is the number of generations until the next control
+update.
+
+If $g$ denotes the GP generation index, the next update point is given by
+%
+\begin{equation}
+g_{\ell+1} = g_{\ell} + k_{\ell}.
+\end{equation}
+%
+Let $P_{g}$ be the population at generation $g$, $F$ the GP transition,
+and $\xi_{\ell}$ the stochastic disturbance. The population transition over
+one control interval is written as
+%
+\begin{equation}
+P_{g_{\ell+1}} = F(P_{g_{\ell}}, u_{\ell}, \xi_{\ell}).
+\end{equation}
+
+The controller observes a compact state representation,
+%
+\begin{equation}
+x_{\ell} =
+\left[
+\tau_{\ell},
+\widetilde{HV}_{\ell},
+\widetilde{\Delta HV}_{\ell},
+D_{\ell},
+\widetilde{L}_{\ell},
+\widetilde{s}_{\ell}
+\right]^{\top},
+\end{equation}
+%
+which summarizes the evolutionary stage, current performance, recent
+improvement, diversity, average tree size, and stagnation length.
+
+This section can be extended with the acquisition function, action-space
+constraints, reward definition, and the update policy used by the
+controller.

@@ -1,0 +1,28 @@
+\begin{tikzpicture}[font=\small, node distance=10mm and 12mm]
+  \node[block, minimum width=34mm, minimum height=14mm] (obs) {State Observation\\[1mm]
+    $x_\ell = [\tau,\widetilde{HV},\widetilde{\Delta HV},D,\widetilde{L},\widetilde{s}]^\top$};
+  \node[block, right=of obs, minimum width=42mm, minimum height=16mm] (bo) {Contextual BO Controller\\[1mm]
+    learn $f(x,p_c,p_m,k)$\\
+    select $u_\ell=(p_{c,\ell},p_{m,\ell},k_\ell)$};
+  \node[block, right=of bo, minimum width=38mm, minimum height=16mm] (plant) {GP Plant\\[1mm]
+    evolve for $k_\ell$ generations\\
+    $P_{g_{\ell+1}} = F(P_{g_\ell},u_\ell,\xi_\ell)$};
+  \node[block, below=14mm of plant, minimum width=34mm] (stats) {Interval Statistics\\[1mm]
+    $\Delta HV_\ell^{\mathrm{rate}},\ \bar{D}_\ell,\ C_k(k_\ell)$};
+  \node[block, below=14mm of bo, minimum width=42mm] (reward) {Reward Computation / BO Update\\[1mm]
+    $r_\ell = w_p\widetilde{\Delta HV}^{\mathrm{rate}}_\ell + w_dS_D - w_cC_k$\\
+    append $(x_\ell,u_\ell,r_\ell)$};
+  \node[block, below=14mm of obs, minimum width=34mm] (nextstate) {Next Update State\\[1mm]
+    observe $P_{g_{\ell+1}}$ and build $x_{\ell+1}$};
+
+  \draw[line] (obs) -- node[above] {$x_\ell$} (bo);
+  \draw[line] (bo) -- node[above] {$u_\ell=(p_c,p_m,k)$} (plant);
+  \draw[line] (plant) -- node[right] {$P_{g_{\ell+1}}$} (stats);
+  \draw[line] (stats) -- node[above] {summary statistics} (reward);
+  \draw[line] (reward) -- node[left] {$r_\ell$} (nextstate);
+  \draw[line] (nextstate) -- node[above] {$x_{\ell+1}$} (obs);
+  \draw[line] (plant.south) |- ($(nextstate.east)+(0.0,0.0)$) -- (nextstate.east);
+  \draw[line] (reward.north) -- node[right, pos=0.32] {history $\mathcal{D}_{\ell+1}$} (bo.south);
+
+  \node[align=center, above=2mm of plant, font=\small] (time) {$g_{\ell+1}=g_\ell+k_\ell$};
+\end{tikzpicture}

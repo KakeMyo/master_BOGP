@@ -1,0 +1,15 @@
+{
+  "pilot_runs_checked": 36,
+  "paired_seeds_checked": 100,
+  "original_contextual_histories_equal": true,
+  "warmup_histories_equal": true,
+  "sd_convention": "ddof=0",
+  "training_calls_per_run_including_initial": 1896,
+  "paired_mean_hv_difference": 0.00019052137124544565,
+  "paired_hv_ci95": [
+    -0.005477518061222409,
+    0.0058585608037133
+  ],
+  "artifact_date": "2026-10-07",
+  "experiment_date": "2026-10-01"
+}

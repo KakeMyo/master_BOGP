@@ -12,7 +12,7 @@ if str(SRC) not in sys.path:
 from bogp.controller import BOControllerConfig, ContextualBayesianRateController
 from bogp.loop import ClosedLoopRunner
 from bogp.objectives import RewardConfig
-from bogp.toy_engine import ToyDynamicGPEngine
+from bogp.test_v1_toy_engine import ToyDynamicGPEngine
 from sklearn.exceptions import ConvergenceWarning
 
 
@@ -21,9 +21,10 @@ def main() -> int:
 
     controller = ContextualBayesianRateController(
         BOControllerConfig(
-            control_interval=3,
-            warmup_points=8,
-            candidate_pool_size=512,
+            candidate_k_values=(1, 3, 5),
+            warmup_per_k=2,
+            min_observations_per_k=2,
+            candidate_pool_size_per_k=128,
             random_seed=7,
         )
     )
@@ -40,15 +41,17 @@ def main() -> int:
     best_reward = max(record.reward.total for record in records)
     print("Closed-loop smoke test completed.")
     print(
-        "Initial control: p_c={0:.3f}, p_m={1:.3f}".format(
+        "Initial control: p_c={0:.3f}, p_m={1:.3f}, k={2}".format(
             first.control.crossover_rate,
             first.control.mutation_rate,
+            first.control.update_period,
         )
     )
     print(
-        "Final control:   p_c={0:.3f}, p_m={1:.3f}".format(
+        "Final control:   p_c={0:.3f}, p_m={1:.3f}, k={2}".format(
             last.control.crossover_rate,
             last.control.mutation_rate,
+            last.control.update_period,
         )
     )
     print(

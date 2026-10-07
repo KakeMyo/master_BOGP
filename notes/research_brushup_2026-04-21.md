@@ -28,9 +28,9 @@
 | 閉ループ実行器 | 実装済み | `src/bogp/loop.py` |
 | 文脈ベクトル正規化 | 実装済み | `src/bogp/context_metrics.py` |
 | 報酬関数 | 実装済み | `src/bogp/objectives.py` |
-| toy GP engine | 実装済み | `src/bogp/toy_engine.py` |
+| toy GP engine | 実装済み | `src/bogp/test_v1_toy_engine.py` |
 | 構造多様性・意味多様性 | 実装済み | `src/bogp/diversity.py` |
-| smoke test | 実装済み | `scripts/smoke_test.py` |
+| smoke test | 実装済み | `scripts/smoke_test_v1.py` |
 | 文献管理ルール | 整備済み | `references/reference_workflow_spec.md` |
 | 既存文献台帳 | 整備済み | `references/README.md` |
 

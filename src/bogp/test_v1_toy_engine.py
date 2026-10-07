@@ -39,14 +39,20 @@ class ToyDynamicGPEngine:
     def snapshot(self) -> GPStateSnapshot:
         return GPStateSnapshot(**self._state.__dict__)
 
-    def run_interval(self, control: ControlInput, interval_generations: int) -> IntervalResult:
+    def run_interval(
+        self,
+        control: ControlInput,
+        interval_generations: int | None = None,
+    ) -> IntervalResult:
         start_state = self.snapshot()
+        interval_generations = control.update_period if interval_generations is None else interval_generations
         interval_generations = max(1, interval_generations)
         remaining = self.config.total_generations - self._state.generation
         steps = min(interval_generations, remaining)
 
         cumulative_hv_delta = 0.0
         cumulative_best_improvement = 0.0
+        diversity_values = []
 
         for _ in range(steps):
             progress = self._state.progress
@@ -106,6 +112,7 @@ class ToyDynamicGPEngine:
                 stagnation_generations=stagnation,
                 mean_tree_size=mean_tree_size,
             )
+            diversity_values.append(diversity)
 
         self._state = GPStateSnapshot(
             generation=self._state.generation,
@@ -123,5 +130,5 @@ class ToyDynamicGPEngine:
             start_state=start_state,
             end_state=self.snapshot(),
             evaluations=steps * self.config.population_size,
+            diversity_values=tuple(diversity_values),
         )
-
