@@ -6,6 +6,17 @@ This repository is a research workspace for Bayesian-optimization-controlled
 genetic programming. Preserve research drafts, source references, and result
 artifacts unless the user explicitly asks to remove or replace them.
 
+## Research resumes
+
+- When the user asks to create a research resume or progress-report handout in
+  this project (for example, "レジュメを作成してください"), read and apply
+  `.agents/skills/bogp-research-resume/SKILL.md`.
+- Default to a Japanese A4, 10pt, two-column LaTeX document and a compiled PDF,
+  following the evidence checks and visual verification in that skill.
+- Explicit user choices about audience, format, length, or subject take priority
+  over the defaults. Read fresh experiment records; do not reuse the example's
+  conclusions or rerun experiments merely to write a resume.
+
 ## Python environment
 
 - Use the repository-local `.venv`; never commit it.
