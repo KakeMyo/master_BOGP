@@ -951,6 +951,18 @@ $$
   - 注意: 通常NSGA-IIが最初の十数世代で停滞する例であり，Airfoilを採用するだけで18世代後の改善が保証されるわけではない。controller-blind pilotでheadroomを確認する
   - 確認状況: 2026-09-03 に ACM DOI，arXiv，TU Delft機関リポジトリ，PDF本文を確認し，PDFを `references/` に保存した
 
+### 10.2.1 問題設定用文献の取得状況
+
+2026-10-01の問題設定用文献整理では、採用済み[R10][R24][R25][R28][R29][R30]を[目的別フォルダ](../references/problem_settings/README.md)に同一PDFの閲覧コピーとしてまとめた。直下原本と番号は変更していない。
+
+未正式採用文献は以下の3件を別管理する。
+
+- LH01 Vladislavleva et al. (2009): [メタデータ](../references/Order%20of%20Nonlinearity%20as%20a%20Complexity%20Measure%20for%20Models%20Generated%20by%20Symbolic%20Regression%20via%20Pareto%20Genetic%20Programming.md)。UBall5Dの原条件確認用。本文未取得であり、具体的な標本仕様の根拠には使わない。
+- LH02 Ni et al. (2013): [メタデータ](../references/The%20Use%20of%20an%20Analytic%20Quotient%20Operator%20in%20Genetic%20Programming.md)。AQ・難問条件確認用。本文未取得であり、未確認の条件は本番仕様へ使わない。
+- LH03 Zhang et al. (2025): [メタデータ](../references/A%20Multi-Objective%20Genetic%20Programming%20with%20Size%20Diversity%20for%20Symbolic%20Regression%20Problem.md)。Brunel機関リポジトリ版本文を取得。1000世代の評価例として保存するが、事後的なMSE外れ値除外手順を本研究へ採用しない。取得と正式採用を区別する。
+
+次に実装・pilotへ進める候補は[5件の絞り込みメモ](thesis_problem_shortlist_5.md)にまとめた。選定根拠は本文確認済み[R29][R30]と、以前の比較論文との連続性[R25]である。全22案は削除せず保持する。
+
 ### 10.3 今後の追加ルール
 
 - 新たに参照した論文は、[reference_workflow_spec.md](/Users/kakemyo/Downloads/master_BOGP/references/reference_workflow_spec.md) の手順で調査、取得、採否判断を行う
@@ -3241,3 +3253,57 @@ $$
   - 現行W18 sequentialはbaselineとして残し、counterbalanced W18、`k=1`短縮warm-up、warm-up replay固定率をablation候補とする
 - 実装前提:
   - tabular SR adapter、固定split manifest、hard node cap 100、式とtest指標の保存、HV正規化・reference pointの固定が必要
+
+### 2026-10-01 | 長期探索型問題設定の調査・構成案を再開し検証
+
+- 対象: `notes/thesis_long_horizon_problem_setting_options.md`と文献調査ログ。既存のNiehaus/Oh由来候補、新規候補22項目、warm-up比較案を保持した。
+- 保存済み本文で再確認し、元論文の条件と本研究への移植条件を分離した。[R24][R25][R29][R30]
+- Niehausの最大100,000 tournamentsを本研究の世代数と同一視しないこと、分類の元データ・生成規則が本文だけでは確定しないことを明記した。[R24]
+- Ohの固定GPの突然変異0.01とSAGP平衡点0.15の差を踏まえ、高突然変異・tuning済み固定との比較を維持した。[R25]
+- 設計メモ内のNiehaus DOIとOh掲載誌・DOI、Harrisonのsynthetic定義の付録番号を訂正した。元文献メタデータとPDFは変更していない。
+- 有限archiveの切り詰めでHVが低下し得るため、`t_90`を履歴最大HVの有限予算内改善量に対する到達時間として定義した。生HVも別保存する。
+- test HVの誤差分母・linear scalingをtrain由来に固定し、split×seedの反復を独立30標本として扱わない統計手順へ補正した。
+- 評価予算31,900は初期100＋318世代×100の評価スロットであり、キャッシュ・棄却・係数探索がある場合の実fitness呼出し数を別記録する方針を追記した。
+- 検証: `.venv/bin/python -m pytest -q`で52 passed、matplotlib由来のdeprecation warnings 13件。
+- 実行状況: 文献調査と実験設計の再確認を完了。新benchmarkによる予備実験は未実行であり、adapter・式保存・test評価等の実装を必要とする。
+
+### 2026-10-01 | 問題設定用文献の取得・整理と5候補への絞り込み
+
+- ユーザー依頼により`references/problem_settings/`を作成。採用済み[R10][R24][R25][R28][R29][R30]のPDF・メタデータを同一内容の閲覧コピーとして配置し、直下原本・旧候補資料・既存リンクを保持した。
+- Zhang et al. (2025), *A Multi-Objective Genetic Programming with Size Diversity for Symbolic Regression Problem*をBrunel大学機関リポジトリから新規ダウンロード。accepted版4ページ、IEEE personal useの条件を確認し、原本とtopic copyを保存した。
+- 上記論文は取得済みLH03として保留管理。事後的MSE外れ値除外を本研究の評価手順には採用しない。本文取得と正式採用を区別した。
+- Vladislavleva原典LH01とNi AQ原典LH02を出版社・DOI・著者/大学ページ・機関リポジトリ・タイトルで再探索したが、ルールに合う全文を確保できず、完全タイトル・DOI等を手動取得リストへ記録した。
+- 次に実装・固定率pilotへ進める候補をUBall5D、Airfoil、Concrete、CCPP、Korns-12の5件に絞り、採用理由・条件・注意点・他候補を保留する理由を`notes/thesis_problem_shortlist_5.md`に保存した。[R29][R30][R25]
+- 以前の22案・Niehaus/Oh由来の案・warm-up比較案は保持。新しい問題でのGP実験は今回は実行していない。
+- 検証: PDF7本の読込み、全原本/topic copyのSHA-256一致、9件のメタデータ、bundle/shortlist内ローカルリンク、5件の候補行、`git diff --check`を確認。新規PDFのタイトル・実験条件ページをレンダリングし判読可能なことを確認した。
+- コード変更はないためpytestは再実行していない。コミット・pushは行っていない。
+
+### 2026-10-01 | UBall5D・Airfoil・Concreteをセミナー条件で各3回実行
+
+- ユーザー指定を優先し、最終セミナーレジュメの集団24・warm-up18＋本評価60＝総78世代で、3問題×4手法×seed0/1/2の計36実行を完了した。
+- 訓練fitness呼出は初期24＋1872子評価＝1896/実行、合計68,256。BO制御器・報酬・遺伝演算・生存選択・関数集合は変更していない。
+- UCI公式Airfoil/Concreteの元配布物を`data/problem_settings/raw/`へ保存。Concreteの同一入力重複34行は除外せず同partitionへまとめた。train-only X/y標準化、固定split/データseed/hashを記録した。
+- UBallは[R29]のcanonical train1024/test5000と独立validation1024。GPの3seedは同一データ上の探索乱数反復である。
+- adapterと検索に影響しない式記録用engineを実装し、各世代の訓練選択式を検索終了後にvalidation/testへ適用した。テストによる式選択はしていない。
+- 提案法の最終HV平均: UBall0.798186、Airfoil0.829705、Concrete0.824499。高突然変異との差はそれぞれ+0.001094、+0.018369、−0.003884。
+- Airfoilは提案法3回とも18世代後に改善し、うち2回は60世代以降もHV改善。固定標準にも後半改善があり、次の長期pilotの最優先。ただしtest誤差で固定標準を上回らず、n=3の優位確定ではない。
+- UBallは提案法3回とも定数式・train NRMSE約1。現構成のまま長期主問題に採用しない。Concreteは提案法2回が18世代までで止まり、高突然変異2回には終盤改善があるため副検証として保持。
+- 結果: `outputs/thesis_three_problem_pilot/seminar_conditions_seed3_20261001/`。詳細: `notes/thesis_three_problem_pilot_report.md`。
+- focused tests 15件、全pytest 61件成功（既存Matplotlib非推奨warning13件）。36実行の世代・初期HV・子評価数・warm-up境界を確認し、q_W/t90を別JavaScript実装でも再計算一致。推移図を目視確認した。
+- 本番採否用の120/318世代controller-blind screenは未実行。以前の5候補・22案・Niehaus/Oh由来案は保持した。コミット・pushは行っていない。
+
+### 2026-10-07 | 指導教員共有用：3問題の予備実験と状態入力比較のレジュメ作成
+
+- 何をしたか: 2026-10-01に実行済みのUBall5D・Airfoil・Concrete各3回の予備実験と、Friedman-Iの提案法／非文脈BO各100回の比較を、以前のレジュメと同じA4・10pt・2段組の新規LaTeX資料へまとめた。
+- 成果物: `notes/supervisor_experiment_comparison_resume_20261007.tex`、同名PDF（7ページ）、`notes/supervisor_experiment_comparison_resume_20261007_source_bundle.zip`。
+- 図表生成元: `scripts/build_supervisor_experiment_resume.py`。保存先は`notes/figures/supervisor_comparison_20261007/`。既存レジュメ・結果・制御器・問題設定は上書きしていない。今回、新しいGP実験は実行していない。
+- なぜそうしたか: 初見の読者に、問題選定のための各3回の予備観察と、状態入力の有効性を切り分ける100回の比較を混同せず理解してもらうため。
+- 反映内容: 簡単な研究目的、NSGA-II型GPとBOの分担、HV・NRMSE・構造多様性の意味、共通評価予算、問題の具体的内容と選定理由、前処理・分割・重複管理、結果表、世代推移・分布・対応比較・k選択割合、結果の限界、次の検証を記載した。
+- 問題設定の文献: 保存済み本文を再確認し、[R29] White et al.のTable 5・6.1節をUBall5Dの式・標本仕様と選定の注意に、[R30] Liu et al.の3.1節・図1および6.1.2節・図3をAirfoilの小木偏重・早期停滞の背景に、Table 2・3をConcreteの多目的GP利用実績に使った。資料内は[1][2]で採番し、研究ノート番号との対応も記載した。
+- データ出典: 取得済みUCIデータの保存メタデータを資料内[3][4]で引用した。今回の分割・標準化・小集団・世代数は本研究の条件であり、元論文の推奨条件や完全再現ではないことを明示した。参考文献原本と問題設定用フォルダは保持し、新しい文献は取得していない。
+- 主要な整理: Airfoilは後半改善を観察できる継続検証候補、Concreteは早期停滞の副候補、UBall5Dは定数式への停滞を診断する候補とした。HVが約0.8でも定数式になり得ること、各3回で優位を確定できないこと、テスト誤差で問題を選ばないことを記載した。
+- 状態入力比較の整理: 平均最終HV差+0.000191（対応95%信頼区間に0を含む）により平均性能の上乗せは未確認。一方、HV標準偏差約26%低減を支持する結果は報告し、短周期化や少量学習の影響は仮説として分けた。観測なしBOでも報酬観測・状態計測は継続していることを明記した。
+- 検証: 3問題の36実行の世代履歴・最終HV・多様性・訓練誤差を保存集計と照合した。100組のウォームアップ一致、1872子評価、提案法と既存最終実験の全世代履歴一致を再確認し、対応平均差・信頼区間・t検定も再計算一致。照合結果は`source_validation.json`へ保存した。
+- PDF確認: LuaLaTeXで最終版をコンパイルし、7ページ、未定義参照・warning・overfull・underfullなしを確認。Popplerで全7ページを描画し、日本語、表、凡例、キャプション、図の切れ、ページ配置を目視確認した。ソースZIPの内容検査も実施した。
+- 実験エンジンには変更を加えていないため、全pytestは再実行していない。資料生成スクリプトの実行と上記数値照合・PDF確認で検証した。
+- Git: branch `codex/premethod`、HEAD `46a8a43`。コミット・pushなし。新規資料・図表・生成スクリプトはローカルで未コミット、既存の未コミット変更と`outputs/`内の結果は保持した。

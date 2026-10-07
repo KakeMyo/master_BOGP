@@ -1,0 +1,30 @@
+# A Multi-Objective Genetic Programming with Size Diversity for Symbolic Regression Problem
+
+- Reference ID: 未採番（主プロトコル根拠としての正式採用保留）
+- Candidate ID: LH03
+- Status: Hold; full text acquired
+- Category: H、想定B/C
+- Citation: Zhang, Y., Li, G., Huang, Z., Jia, J., Li, X., & Peng, D. (2025). *A Multi-Objective Genetic Programming with Size Diversity for Symbolic Regression Problem*. 2025 IEEE Congress on Evolutionary Computation (CEC), 1–4. https://doi.org/10.1109/CEC65147.2025.11042993
+- DOI: 10.1109/CEC65147.2025.11042993
+- URL: https://bura.brunel.ac.uk/handle/2438/31928
+- PDF URL: https://bura.brunel.ac.uk/bitstream/2438/31928/1/FullText.pdf
+- Elsevier URL: 該当なし（IEEE）
+- Source checked: Brunel University Research Archive record and the linked full PDF; 2026-10-01
+- Access: institutional-repository full PDF downloaded, 4 pages; accepted version before final editing
+- Local PDF: `references/A Multi-Objective Genetic Programming with Size Diversity for Symbolic Regression Problem.pdf`
+- Topic copy: `references/problem_settings/A Multi-Objective Genetic Programming with Size Diversity for Symbolic Regression Problem.pdf`
+- SHA-256: `d5bd1b254c7f4692951573ce1a1eb1cd15eec87c20706cdbbbf8e7b95daf18c1`
+- Usage notice: IEEE personal use permitted; public redistribution/republication requires permission. 原著作権表示を維持し、今回commit/pushは行わない
+- Citation signal: 被引用数を採否に使用していない
+- Why this paper matters: accuracy--size MOGPの小木偏重、size diversity、Airfoil/Concrete等での長期評価例を扱う
+- Information used in this project:
+  - Table I: population 500、1000 generations、max size 100、crossover/mutation 0.9/0.1、30 runsの例を確認
+  - §III-CとTables II/III: 公開データでの精度とサイズ評価の追加例として保存
+  - §III-C.2: MSE>1を外れ値として除く処理があるため、本研究の統計プロトコルには採用しない
+  - 1000世代の設定だけでは、1000世代まで継続改善した根拠にはならない
+- Related note sections: `references/problem_settings/README.md`; `reference_candidates/problem_settings/long_horizon_mogp_search_log.md`
+- Manual download queries:
+  - Complete title: `A Multi-Objective Genetic Programming with Size Diversity for Symbolic Regression Problem`
+  - Author year query: `Zhang Li Huang Jia Li Peng 2025 Size Diversity Symbolic Regression`
+  - DOI: `10.1109/CEC65147.2025.11042993`
+- Next action: 本文取得は完了。採用済み[R30]を主機序根拠とし、本論文は補助候補として保持。外れ値除外手順は借用しない

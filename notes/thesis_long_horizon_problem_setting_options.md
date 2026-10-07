@@ -1,9 +1,12 @@
 # 修論本実験に向けた長期探索型問題設定・実験構成候補
 
 - 作成日: 2026-09-03
+- 再開・再確認日: 2026-10-01
 - 状態: 候補比較版。まだ最終問題を確定しない
 - 目的: BO warm-up の18世代より後にも十分な探索余地があり、状態依存の操作率制御を検証できる問題を、既存候補を捨てずに選定する
 - 文献調査ログ: `reference_candidates/problem_settings/long_horizon_mogp_search_log.md`
+- 最新の実装・pilot候補5件: [thesis_problem_shortlist_5.md](thesis_problem_shortlist_5.md)（2026-10-01）。本メモの22候補と以前の暫定構成は比較履歴として保持する
+- 本文PDF・取得状態: [問題設定用文献フォルダ](../references/problem_settings/README.md)
 
 ## 1. 結論
 
@@ -118,6 +121,17 @@ shape constraint等を加えた3目的問題は、多次元HVを実装・検証�
 
 ## 5. 既存2論文由来の候補は残す
 
+以下は、元論文の再現条件と、本研究へ移植する条件を分けて記す。両論文は現在のaccuracy--size MOGPや文脈付きBOを評価した論文ではないため、データ問題を借りることと、手法・性能値を直接再現比較することは同じではない。
+
+### 5.0 元論文の性能評価条件
+
+| 論文 | 問題と目的 | 探索・反復条件 | 本研究へそのまま移せない点 |
+|---|---|---|---|
+| Niehaus and Banzhaf (2001) [R24] | sinの50点回帰: 二乗誤差の和。合成1000点の分類: 誤分類率 | 集団100、4個体のsteady-state tournamentを最大100,000回。ノード上限40/80/100/140、各組合せ60 runs | 単目的であり、交叉は実験では使用しない。回帰では4種類の単親突然変異を制御。tournament回数は本研究の世代数と一致しない |
+| Oh et al. (2021) [R25] | Auto MPG、CCPP、CPU-ERP、非公開製造CTQの回帰。主性能指標はMSE | train/test=80/20、100反復。入力次元をDとして集団数1000√D、世代数10√D。関数集合は{+,−,×,÷,log}、固定GPは交叉0.9・突然変異0.01 | Pareto HVによる多目的性能評価ではない。大集団・少世代の設定を、現行PythonのMOGPへそのまま移すと費用・探索圧が変わる |
+
+Niehaus論文の結果図は、各runを最終fitnessでソートした図であり、世代方向の収束曲線ではない。Oh論文も主に最終MSEの分布を示す。そのため、いずれの図も「現在の実装で18世代以後に長く改善する」根拠にはならない。これは固定率pilotで新たに検証する事項である。[R24][R25]
+
 ### 5.1 P03: Niehaus and Banzhaf由来のsin回帰
 
 以前の候補を、低コストの校正問題として残す。
@@ -129,6 +143,8 @@ y_i = sin(x_i)
 目的2 = tree size
 ```
 
+元論文の回帰用nodeはADD、SUB、MUL、DIV、Factor、Const、Inputvalであり、sin/cosは含まれない。FactorのパラメータはN(0,4)、ConstはN(1,4)と記載される。回帰で使う突然変異はinsert path、delete path、replace node、delete nodeである。本研究でERCやsubtree mutationへ置き換える場合は、原法の完全再現ではなく、同じtargetを使う派生benchmarkとする。[R24, Table 1・§4.1]
+
 ただし、そのまま `sin` primitiveを与えると `sin(x)` が非常に短い木で表現できる。長期探索を意図する場合は、原設定に合わせてsin/cosをprimitiveから外し、四則演算等による近似問題として使う。最終評価には独立したdense gridを追加する。
 
 判断:
@@ -136,6 +152,12 @@ y_i = sin(x_i)
 - 実装確認、操作率ログ、HV正規化の検査には使える
 - 1変数・50点なので修論の主問題としては弱い
 - Niehaus法は個体ごとに複数の突然変異演算子確率を持つのに対し、本研究は集団全体の `(p_c,p_m,k)` を区間単位で制御するため、直接の同一手法比較とは呼ばない
+
+上の「個体ごと」はIDPに該当する。元論文は、集団単位のPDP、親fitness近傍の成功履歴を使うFBDP、個体単位のIDPの3種類を比較している。いずれも、この回帰実験では現在の交叉率・突然変異率の2変数制御とは行動空間が異なる。[R24]
+
+残す実験構成は、sin近似をerror--sizeの2目的へ移植し、ノード上限40/80/100/140の感度を見る案である。上限を変える際はHVのsize分母をどうするか先に固定する。同じ絶対size分母を使う場合と、上限ごとに正規化する場合は解釈が異なるので、後者のHVを横断して優劣をつけない。主実験の上限100に対する感度条件として位置づける。
+
+元論文の分類設定も候補履歴として残すが、現時点での直接採用はできない。1000点の二値分類で、sin/cosとThreshold nodeを追加する一方、本文だけでは1000点の生成規則・元データを確定できない。また、現行の回帰用GPにはThresholdを用いた分類出力と誤分類率評価がない。生成式・データ取得と分類adapterを追加すれば派生問題は作れるが、今回は回帰問題で同じ研究仮説を検証できるため、優先度を下げる。[R24, §4.2]
 
 ### 5.2 P04: Auto MPG
 
@@ -146,6 +168,7 @@ y_i = sin(x_i)
 注意:
 
 - Oh et al.本文の391件はUCIの通常の欠損除去結果392件と一致しない
+- 入力はcylinders、displacement、horsepower、weight、acceleration、model yearの6個を事前固定する。originを追加する7入力版と混同しない
 - 小規模なので18世代以内に構造が固まる可能性がある
 - 主問題ではなく、pilotと実装検証に向く
 
@@ -184,6 +207,8 @@ p_c=0.9-0.15r,\qquad p_m=0.5-0.35r
 - 実際に適用した値を保存
 - 固定 `(0.75,0.15)` も比較し、適応効果と単なる高突然変異化を分離
 
+この比較は「本研究の行動制約へ射影したOh由来制御器」と命名し、完全再現とは呼ばない。元論文の固定GPは突然変異0.01であり、平衡点の0.15との差が大きい。SAGPの優位をそのまま適応の効果と解釈せず、本研究の高突然変異固定・tuning済み固定との比較を必須にする。[R25, 式(1)(2)・§4]
+
 ## 6. 新しい合成問題候補
 
 ### 6.1 P08: Vladislavleva-4 / UBall5D
@@ -200,6 +225,8 @@ test : x_i ~ U[-0.25, 6.35], 5000 points
 dimension: 5
 noise: none
 ```
+
+式と標本仕様の直接の根拠は[R29, Table 5・§6.1]である。これはGP benchmarkの提案論文であり、当該表だけから「現在のMOGPで何世代必要か」は分からない。元のPareto GP論文の全文取得は保留中なので、その未確認の条件を完全再現仕様には含めない。
 
 長期候補として強い理由:
 
@@ -237,6 +264,8 @@ test : U[-50, 50], 10000 independent points
 - 係数 `9.8` と `1.3` の同定、sin/cosの組合せが必要
 - benchmark提案論文で、複数の専用技法を用いても未解決だった難問として選ばれている
 
+式、無関係変数、標本仕様と難度に関する根拠は[R29, Table 5・§6.1]である。「未解決」は同論文が引用する先行実験についての記述であり、現在の全GP法で解けないという意味ではない。
+
 注意:
 
 - 20000 fitness casesは高コスト
@@ -257,6 +286,8 @@ test : x=1,...,120
 
 外挿を安価に確認できる。ただし1入力であり、式木GPが連続近似として解くため、適応制御の必要性はP08/P09より弱い。安価なscreen候補とする。
 
+標本仕様は[R29, Table 5]による。testの1～50はtrainと重なるので、全域1～120に加え、外挿部51～120の誤差を分けて報告する。
+
 ### 6.4 P11: Pagie-1
 
 \[
@@ -269,6 +300,8 @@ grid spacing: 0.4
 ```
 
 smoothだが難しいとされ、次元を増やしてscalable problemにできる。別test setが原仕様にないため、独立dense gridまたはランダムtestを事前定義する。次元追加はcanonical reproductionではなく派生問題と明記する。
+
+式とgridは[R29, Table 5・§6.1]による。生成時には `z^4/(1+z^4)` と代数的に書き換え、`z=0`で連続拡張値0と定義する。target記号は入力のyと区別してf(x,y)とする。test gridの追加は本研究の拡張である。
 
 ### 6.5 P12: Dou and RockettのSalustowicz型F5
 
@@ -285,6 +318,8 @@ y=8e^{-x}x^3\cos x\sin x\left(\cos x\sin^2x-1\right),
 - generations: 222
 - objectives: errorとnode count
 - primitive: `{+,-,*,AQ}`
+
+出典は[R10]の実験設定とF5の定義。AQ(a,b)=a/√(1+b²)。222世代は実験予算であり、それだけでは222世代まで改善が続いた証拠にはならない。
 
 targetにはexp、sin、cosが含まれる一方、primitiveへ直接は与えず、限られた表現で近似する。このため完全式発見ではなく、近似精度と木サイズのPareto frontを長く改善する候補になる。
 
@@ -303,6 +338,8 @@ y=\sum_{i=1}^{8}\sin(x_i+x_0)
 \]
 
 1000標本で、単純な `sin(x)` よりも多変数と反復部分構造を必要とする。ただし、付録は式で `x_0` から `x_8` まで9変数を使う一方、入力スケールとして列挙する素数は8個であり、記載に不整合がある。
+
+根拠は[R28, Appendix B]。大きい木が必要という推論と、実測した収束速度は区別する。
 
 判断:
 
@@ -325,7 +362,9 @@ Ripple、RatPol3D、UBall5Dのnoise付き・AQ条件は、長期探索候補と�
 - 規模: 1503件、5入力、欠損なし、CC BY 4.0
 - target: scaled sound pressure level
 
-Liu et al.のaccuracy--size MOGPでは、初期に小さい木が過剰複製されると、大きく高精度な木を生み出しにくくなる。AirfoilのHV曲線では、通常NSGA-II等が最初の十数世代後に低い値で停滞する一方、evolvabilityを保つ改良法は100世代を通して改善する。
+Liu et al.のaccuracy--size MOGPでは、初期に小さい木が過剰複製されると、大きく高精度な木を生み出しにくくなる。AirfoilのHV曲線では、通常NSGA-II等は初期十数世代以後の改善が鈍化し、改良法より低いHVへ収束する傾向がある。一方、evolvabilityを保つ改良法は100世代を通して改善する。通常法も図では後半に小幅な上昇があり、「一切改善しない」とは解釈しない。
+
+根拠は[R30, §6.1.2・Figure 3]。図は30 runsのtrain HV平均と標準偏差であり、本研究のpopulation 100・操作率制御条件の実測ではない。借りるのは公開回帰問題と縮退仮説であり、同じ収束曲線を保証しない。
 
 本研究との対応:
 
@@ -348,6 +387,8 @@ Liu et al.のaccuracy--size MOGPでは、初期に小さい木が過剰複製さ
 - UCI説明: 強度は材料配合と材齢の強い非線形関数
 
 Airfoilより入力が多く、データも十分あり、公開性が高い。長期収束の直接証拠はTowerほど強くないため、controller-blind pilotで確認する。外的妥当性と再現性のバランスがよい。
+
+Concrete、Energy、Wine、Towerをaccuracy--size MOGPで用いる根拠は[R30, Tables 2・3]。件数・入力数・許諾の確認は各UCI公式ページによる。
 
 ### 7.3 P16: Energy Efficiency
 
@@ -372,7 +413,11 @@ UCI自身が全入力の関連性は不明としており、実データのfeatu
 - Harrison et al.のMOGP/GP-GOMEA評価で使用
 - 同論文の平均HV曲線は約0～400世代を表示し、18世代後にも長い改善尾部を持つ
 
+根拠は[R28, Figure 7]。大集団・multi-tree等を使う別アルゴリズムの図なので、本研究でのheadroomはpilot確認が必要である。
+
 長期候補として最も直接的な図がある。ただし、原論文のGP-GOMEAは本研究のNSGA-II型subtree crossover/mutation GPと大きく異なる。そのため、借りられるのはデータ問題であり、同じ収束曲線になるとは主張できない。
+
+また、Figure 7でも改善の大部分は初期に生じ、後半は小さい尾部である。「400世代の横軸がある」だけで選定基準を満たすとはいえない。18世代以前の改善比と、その後の改善の実用的大きさを本研究の条件で確認し、尾部が僅かなら主問題から外してstress/補助条件に留める。
 
 正式採用前の条件:
 
@@ -424,6 +469,8 @@ A5: (0.60,0.30)              強い探索条件
 
 固定率 `a` とseed `s` のarchive HVを `HV_{a,s}(g)` とする。各固定率のseed中央値曲線を `\widetilde{HV}_a(g)` とし、最終中央値が最も高い固定率を `a*` とする。
 
+ただし、現行engineはarchiveをcrowding distanceで200件へ切り詰めるため、生のarchive HVは単調非減少とは限らない。選定用の到達度は、固定の原点・参照点で0～1へ正規化したHVの履歴最大値 `H_{a,s}(g)=max_{0<=u<=g} HV_{a,s}(u)` とする。以下の `\widetilde{HV}` はこのHのseed中央値を表す。生のHV、履歴最大HV、切り詰めに伴う損失は別々に保存し、履歴最大値を現在保持できているfrontの品質と混同しない。
+
 \[
 q_W=
 \frac{\widetilde{HV}_{a^*}(18)-\widetilde{HV}_{a^*}(0)}
@@ -441,7 +488,7 @@ q_W=
 5. 18世代以後の複数窓で正の中央値傾きがある
 6. reference pointのclipや初期HV飽和で見かけの値を作っていない
 
-分母が小さい問題は第1条件で除外する。archive HVは単調非減少なので、`t_90`は各seedの全改善量に対して定義し、seedごとの値を集計する。
+分母が小さい問題は第1条件で除外する。`t_90`は各seedについて `H(g)>=H(0)+0.9[H(G)-H(0)]` を初めて満たす世代とする。改善ゼロのseedでは未定義とし、その割合も報告する。これは「最終HV絶対値の90%」でも「真のPareto frontへ90%到達」でもなく、この有限予算内の履歴最大改善量に対する到達時間である。条件4のHVもHを使い、生の `HV(G)-HV(18)` を補助報告する。上の数値閾値は文献の標準ではなく、本研究で事前登録する候補選定用の仮基準であり、正規化や実行予算を変えれば再検討する。
 
 ### 9.3 状態依存の操作率効果を確認する
 
@@ -491,6 +538,8 @@ total = 18 generations
 
 観測数でなく消費世代数を約12へそろえる。`k`ごとの観測数が不均等になりsurrogate学習量が偏るため、ablationとして扱う。
 
+具体例は `k=1`を4回、`k=3`を1回、`k=5`を1回とし、各kの世代消費を4/3/5、合計12世代にする案である。順序はseed間で均衡化する。現行の「各kを最低2回観測」のままでは12世代にならないので、k別の必要観測数を変える設定・検証が必要であり、既存W18の設定値だけを短くして再現できるとはしない。
+
 ### W6-k1: 更新周期を制御しないBO
 
 `k=1`だけを用いるため、6観測なら6世代でwarm-upを終えられる。`p_c,p_m`の状態依存制御の効果と、`k`制御の追加価値を分離する。
@@ -517,13 +566,15 @@ post-warm-up control = 300 generations
 total G = 318 generations
 ```
 
-初期集団を含む目的関数評価回数は、
+各子個体を1回評価し、棄却再試行は構造検査だけで行う場合、初期集団を含む目的関数評価回数は、
 
 \[
 E=N(G+1)=100\times319=31,900
 \]
 
 である。現行報告の `24*78=1872` は子個体だけを数えており、初期24個体を含む真の評価回数は `24*(78+1)=1896` である。本番では必ず初期集団を含める。
+
+31,900はこの条件下の評価予算である。親複製のfitnessをキャッシュする、再試行中にfitnessを計算する、係数探索で追加評価する場合には実際の呼出し数が変わる。初期＋子個体の評価スロット数、実fitness呼出し数、評価した標本数、補助係数評価数、wall-clockを分けて記録する。test再評価とBO内部の候補探索も別枠で数える。
 
 この設定の利点:
 
@@ -534,9 +585,11 @@ E=N(G+1)=100\times319=31,900
 
 追加予算:
 
-- P08やP18で `t_90` が318世代を超えるなら、事前に定義した長期感度条件 `G=500` を追加
+- Round 2の最終3窓（各30世代）にも正の改善が続く、または `t_90>=0.8G` 等の事前基準を満たす問題には、長期感度条件 `G=500` を追加。有限予算内の最終改善に対するt_90は定義上Gを超えないため、`t_90>318`を追加条件にはしない
 - population 200は探索感度として有用だが、非優越ソート費用が約4倍になるためruntime確認後のみ
 - archive無更新による早期停止は使わない。後期の停滞脱出を測れなくなるためである
+
+計算量の規模にも注意する。core 6手法×30 runs×31,900は1問題あたり5,742,000評価スロット、4問題なら22,968,000であり、pilot・tuning・secondary比較は別である。実データでは1評価が数百～数千標本を処理するので、Stage 0で代表的な木サイズごとのruntimeを測ってから本番の問題数・反復数を確定する。世代を伸ばす必要性と、全候補を本番まで走らせる必要性は分ける。
 
 ## 12. 本番の比較法
 
@@ -545,7 +598,7 @@ E=N(G+1)=100\times319=31,900
 | ID | 手法 | 目的 |
 |---|---|---|
 | M1 | fixed standard `(0.80,0.05)` | 前回との連続性 |
-| M2 | fixed high mutation `(0.70,0.20)` | 現在の最強固定baseline |
+| M2 | fixed high mutation `(0.70,0.20)` | 前回実験の有力固定baseline |
 | M3 | tuning-only best fixed | 固定率の公平な強baseline |
 | M4 | context-free BO | 文脈情報の価値 |
 | M5 | contextual BO, `k=1` | 操作率制御と周期制御の分離 |
@@ -572,6 +625,7 @@ E=N(G+1)=100\times319=31,900
 - split index、scaler、data file hashをmanifestへ保存
 - 同じsplit、初期集団、algorithm seedを全比較法で共有
 - 例: 10 data splits × 3 algorithm seeds = 30 paired runs
+- この30 runsにはsplit内の繰り返しがあり、独立した30データ分割とみなさない。検定・CIではsplitを集約単位とするか、split→algorithm seedの階層的再標本化を用いる
 - testは仕様freeze後まで問題選択、率選択、controller調整に使わない
 
 ### 13.2 合成データ
@@ -605,6 +659,8 @@ hard node cap: 100
 
 木サイズ100は現在、目的正規化上限として使われるだけでhard capではない。本番前に、超過子個体を再試行し、上限回数後は親を複製する等の明示的制約を実装する。
 
+上限が真の式の表現に足りるかもpilot前に確認する。サイズ制限だけで改善不能なplateauを作らない。上限100は[R30]との整合のための出発点であり、全targetに最適な値という主張ではない。
+
 ### 14.2 HV正規化
 
 現在の`ObjectiveSpec`は範囲外をclipするため、上限設定が甘いと初期HVを不自然に高くできてしまう。候補問題ごとにfixed pilotで分布を確認し、confirmatory testを見る前に次を固定する。
@@ -616,12 +672,16 @@ hard node cap: 100
 
 第一候補はLiu et al.に近い `MSE/Var(y)` とsize/100、reference `(1.1,1.1)` である。ただし現行のreference `(1,1)` とclip実装を変更するため、HV unit testと過去結果との非互換性を明記する。現行仕様を維持する場合は、pilot seedだけから誤差上限を定め、その値を全手法・confirmatory seedsで固定する。
 
+linear scalingを含むtrain条件で誤差が0～1に収まる根拠は[R30, §5]による。test誤差は1を超え得るので、testを見て誤差上限を拡張したり、全点を1へclipして同じ品質に潰したりしない。参照点より悪い座標の解がHVへ寄与しないことと、誤差自体を切り詰めることは区別する。選定用の0～1 HVは、下限(0,0)・参照(1.1,1.1)なら生HV/1.21と定義する。
+
 ## 15. 評価指標
 
 ### 15.1 主評価
 
 1. 最終archiveをtestで再評価したtest HV
 2. warm-up後のanytime性能
+
+test HVではtrainで得た式だけを再評価し、その候補集合をtest目的上で非優越化する。testを使って新しい式を探索しない。誤差分母はtrain target分散に固定し、標準化・linear scalingの係数もtrainで推定したものを使う。test分散で再正規化したNRMSEを併記するなら別名で保存する。test性能の改善が主張の中心ならtest HVを主評価、train HV-AUCを探索挙動の副評価と事前指定する。
 
 warm-up後のHV-AUCは、本研究内で次のように定義する。
 
@@ -631,6 +691,8 @@ warm-up後のHV-AUCは、本研究内で次のように定義する。
 \]
 
 これは本研究の定義であり、既存論文が同名指標を定義したと主張しない。
+
+手法間比較では共通の境界 `W_ref=18` と同じGを用いる。W6-k1だけ6から積分すると評価区間が異なるため、各手法固有のwarm-up終了から計算するAUCは別名の補助指標にする。固定率法にも共通境界18を適用する。
 
 ### 15.2 必須の補助評価
 
@@ -650,8 +712,8 @@ warm-up後のHV-AUCは、本研究内で次のように定義する。
 - discovery: 5～10 paired seeds
 - tuning: discoveryと分離した10程度のpaired seeds
 - confirmatory: 未使用30 paired runsを基本。pilot分散から事前に必要なら50へ増やす
-- paired bootstrap confidence interval
-- paired permutation testまたはWilcoxon signed-rank test
+- 同一固定split上の独立algorithm seedsだけを対象にする場合は、paired bootstrap CIとpaired permutation testまたはWilcoxon signed-rank test
+- 複数split×複数algorithm seedsでは、手法間の対応を保ったsplit単位の集約・置換、または階層bootstrapを使う。30 runを単純に並べた独立標本検定はしない
 - paired rank-biserial correlation等の効果量
 - 事前指定した比較にHolm補正
 - win/tie/lossと問題横断rankも併記
@@ -668,8 +730,10 @@ warm-up後のHV-AUCは、本研究内で次のように定義する。
 6. HV正規化・reference point・clipの問題別固定
 7. 問題別primitive setとERC/coefficient処理の設定化
 8. 大集団・大標本用のruntime記録とdiversity pair sampling
-9. W18-C等のwarm-up順序設定とログ化
+9. W18-C等のwarm-up順序設定とログ化（interleaved設定は既存実装あり。seed間均衡化と実制御列の保存を確認する）
 10. final archiveのtest再評価
+
+2026-10-01再確認時点で、問題登録はtemplate、structural、sr_alpha_friedman、sr_alpha_poly10である。新候補の汎用tabular adapterと本番評価系は未実装であり、本メモは実行済みの新benchmark結果ではない。`.venv/bin/python -m pytest -q`は52 passed（matplotlib由来のdeprecation warnings 13件）。この通過は既存基盤の動作確認であり、新候補の長期収束や提案法の有効性の確認ではない。
 
 ## 17. 実験の段階構成
 
@@ -753,8 +817,8 @@ MOGP固有の縮退機序 -> Airfoil
 ## 21. 参照文献
 
 - [R10] Dou, T., & Rockett, P. I. (2018). *Comparison of semantic-based local search methods for multiobjective genetic programming*. Genetic Programming and Evolvable Machines, 19, 535–563. https://doi.org/10.1007/s10710-018-9325-4
-- [R24] Niehaus, J., & Banzhaf, W. (2001). *Adaption of Operator Probabilities in Genetic Programming*. EuroGP 2001, 325–336. https://doi.org/10.1007/3-540-45355-5_25
-- [R25] Oh, S., Suh, W.-H., & Ahn, C.-W. (2021). *Self-Adaptive Genetic Programming for Manufacturing Big Data Analysis*. Processes, 9(11), 1931. https://doi.org/10.3390/pr9111931
+- [R24] Niehaus, J., & Banzhaf, W. (2001). *Adaption of Operator Probabilities in Genetic Programming*. EuroGP 2001, 325–336. https://doi.org/10.1007/3-540-45355-5_26
+- [R25] Oh, S., Suh, W.-H., & Ahn, C.-W. (2021). *Self-Adaptive Genetic Programming for Manufacturing Big Data Analysis*. Symmetry, 13(4), 709. https://doi.org/10.3390/sym13040709
 - [R28] Harrison, J., Alderliesten, T., & Bosman, P. A. N. (2025). *A Better Multi-Objective GP-GOMEA - But do we Need it?* GECCO '25 Companion. https://doi.org/10.1145/3712255.3734302
 - [R29] White, D. R., et al. (2013). *Better GP Benchmarks: Community Survey Results and Proposals*. Genetic Programming and Evolvable Machines, 14(1), 3–29. https://doi.org/10.1007/s10710-012-9177-2
 - [R30] Liu, D., Virgolin, M., Alderliesten, T., & Bosman, P. A. N. (2022). *Evolvability Degeneration in Multi-Objective Genetic Programming for Symbolic Regression*. GECCO '22, 973–981. https://doi.org/10.1145/3512290.3528787

@@ -1,0 +1,30 @@
+# A Better Multi-Objective GP-GOMEA - But do we Need it
+
+- Reference ID: [R28]
+- Status: Adopted
+- Category: C/D
+- Citation: Harrison, J., Alderliesten, T., & Bosman, P. A. N. (2025). *A Better Multi-Objective GP-GOMEA - But do we Need it?* GECCO '25 Companion, 10 pages. https://doi.org/10.1145/3712255.3734302
+- DOI: 10.1145/3712255.3734302
+- URL: https://arxiv.org/abs/2507.03777
+- Elsevier URL:
+- Source checked: arXiv abstract page, arXiv PDF, ACM reference format in PDF.
+- Access: OA PDF saved
+- Local PDF: `references/A Better Multi-Objective GP-GOMEA - But do we Need it.pdf`
+- Citation signal:
+  - New 2025 GECCO Companion paper; citation count not used.
+- Why this paper matters:
+  - Directly relevant to symbolic regression with GP-GOMEA and multi-objective GP evaluation.
+  - Uses average hypervolume as a key performance measure for accuracy-complexity trade-offs.
+  - Includes comparisons of average hypervolume versus generations and versus wall-clock time, which is close to this project's use of HV trajectories for convergence discussion.
+- Information used in this project:
+  - Supports evaluating GP/MOGP not only by final hypervolume but also by how hypervolume changes with generations or time.
+  - Does not define or use the exact term `HV-AUC`; it is a close supporting reference for HV trajectory / anytime-style performance discussion rather than a direct source for HV-AUC.
+- Related note sections:
+  - `notes/research_note.md` 10. 参考文献
+  - `reference_candidates/hv_auc_gp/search_log.md`
+- Manual download queries:
+  - Complete title: `A Better Multi-Objective GP-GOMEA - But do we Need it`
+  - Author year query: `Harrison Alderliesten Bosman 2025 A Better Multi-Objective GP-GOMEA`
+  - DOI: `10.1145/3712255.3734302`
+- Next action:
+  - If HV-AUC remains a central claim, continue searching outside GP for papers that explicitly define area-under-hypervolume-curve or anytime hypervolume integral measures.

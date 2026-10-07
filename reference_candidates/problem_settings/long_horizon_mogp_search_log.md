@@ -1,6 +1,7 @@
 # 長期探索型 MOGP 問題設定の文献調査ログ
 
 - 検索日: 2026-09-03
+- 再確認日: 2026-10-01
 - 目的: 18 GP 世代の BO warm-up 後にも改善余地が残り、状態依存の操作率制御を検証できる問題候補を集める
 - 正式な設計メモ: `notes/thesis_long_horizon_problem_setting_options.md`
 
@@ -106,3 +107,29 @@
 - Towerデータの正式な配布元、ライセンス、バージョン、checksumの固定
 - Vladislavleva et al. (2009) と Ni et al. (2013) の出版社または機関リポジトリ版全文の手動取得
 - 候補問題ごとの固定率controller-blind pilot後、採用・保留・負の対照を確定する
+
+## 2026-10-01の再開・再確認
+
+- 保存済み全文から[R24]のpp.325–336、[R25]の式(1)(2)と実験条件、[R29]のTable 5・§6.1、[R30]の§5・Figure 3、[R10]のTables 1・2、[R28]のFigure 7・Appendix Bを再確認した。
+- 出版社/本文URLの再アクセスは、OhのMDPIで429、Whiteのcommunity siteで502、NiehausのDOIでアクセス不可となった。正規取得済みPDFとメタデータがローカルに残っていたため、未確認の転載元へ切り替えず、それらで本文を確認した。LiuのarXiv掲載ページは再アクセスできた。
+- UCI公式ページも再確認し、Airfoilの1503例・5入力、Concreteの1030例・8入力、両者の欠損なし・CC BY 4.0を確認した。
+- 設計メモのNiehaus DOIを`10.1007/3-540-45355-5_26`、Ohの掲載誌・DOIをSymmetry 13(4), 709 / `10.3390/sym13040709`へ訂正した。文献台帳・元メタデータは既に正しいため変更していない。
+- Niehausの4種類の単親突然変異・steady-state条件、分類設定の再現限界、ノード上限感度案を追記し、既存候補を保持した。
+- 200件の有限archiveでは生HVが単調とは限らないため、収束時間を履歴最大HVの改善量に対して定義した。test誤差のtrain由来正規化、split内反復を考慮する統計、評価スロットと実fitness呼出しの区別も追記した。
+- `.venv/bin/python -m pytest -q`: 52 passed、deprecation warnings 13件。新benchmarkでのGP実験は今回実行していない。汎用tabular adapter等の実装後にpilotへ進む。
+
+## 2026-10-01の文献取得・候補5件への絞り込み
+
+- ユーザー依頼により`references/problem_settings/`を用意し、採用済み[R10][R24][R25][R28][R29][R30]のPDFとメタデータを閲覧用にコピーした。原本・旧候補フォルダ・既存リンクは保持。同じDOIのPDFは再ダウンロードしていない。
+- Zhang et al. (2025), *A Multi-Objective Genetic Programming with Size Diversity for Symbolic Regression Problem*を新規取得した。
+  - 正式配布ページ: https://bura.brunel.ac.uk/handle/2438/31928
+  - PDF: https://bura.brunel.ac.uk/bitstream/2438/31928/1/FullText.pdf
+  - 版: accepted、4ページ、IEEE personal use permitted
+  - SHA-256: `d5bd1b254c7f4692951573ce1a1eb1cd15eec87c20706cdbbbf8e7b95daf18c1`
+  - 取得後の本文・表・書誌・レンダリング確認を実施。元PDF由来の非致命的な描画警告は出たが、タイトル・実験条件ページは判読可能で、内容を変更していない。
+  - 元メモ同様、MSE>1を除外する統計手順を主プロトコルへは採用せず、LH03保留文献として保存。
+- Vladislavleva原典（LH01）とNi AQ原典（LH02）は再探索したが、ルールに合う全文を確保できなかった。
+  - 主検索: 完全タイトル、DOI、`site:eprints.whiterose.ac.uk`、`site:sheffield.ac.uk`、`site:uvt.nl`、著者・大学ページ
+  - IEEE DOI先はJavaScript/自動アクセス確認画面。TilburgはIEEEへのリンクのみ。Sheffield著者ページは書誌のみ。
+  - [手動取得リスト](../../references/problem_settings/manual_download_list.md)へ完全タイトル、著者、年、誌名、巻号ページ、DOI、出版社URL、検索語を保存。
+- 次に実装・固定率pilotへ進める候補をP08 UBall5D、P14 Airfoil、P15 Concrete、P05 CCPP、P09 Korns-12に絞った。採用理由・設定・注意点・除外理由を`notes/thesis_problem_shortlist_5.md`へ保存。元22案は比較履歴として保持。

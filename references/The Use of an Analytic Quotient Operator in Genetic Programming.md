@@ -1,0 +1,23 @@
+# The Use of an Analytic Quotient Operator in Genetic Programming
+
+- Reference ID: 未採番（正式採用保留）
+- Candidate ID: LH02
+- Status: Hold / manual acquisition requested
+- Category: H（本文取得待ち）、想定B/C
+- Citation: Ni, J., Drieberg, R. H., & Rockett, P. I. (2013). *The Use of an Analytic Quotient Operator in Genetic Programming*. IEEE Transactions on Evolutionary Computation, 17(1), 146–152. https://doi.org/10.1109/TEVC.2012.2195319
+- DOI: 10.1109/TEVC.2012.2195319
+- URL: https://ieeexplore.ieee.org/document/6186815
+- Author university page: https://sheffield.ac.uk/eee/people/emeritus-staff/peter-rockett
+- Elsevier URL: 該当なし（IEEE）
+- Source checked: IEEE DOI/publisher, Sheffield author page, White Rose repository/title searches, GP bibliography; 2026-10-01
+- Access: metadata/abstract only; no trusted full PDF obtained
+- Local PDF: なし
+- Citation signal: 被引用数を採否に使用していない
+- Why this paper matters: AQとdivisionの比較、難しい回帰問題の条件確認に有用
+- Information used in this project: 書誌と抄録のみ。未確認のnoise・標本・世代条件は本番仕様の根拠にしない
+- Related note sections: `notes/thesis_long_horizon_problem_setting_options.md` P21; `references/problem_settings/manual_download_list.md`
+- Manual download queries:
+  - Complete title: `The Use of an Analytic Quotient Operator in Genetic Programming`
+  - Author year query: `Ni Drieberg Rockett 2013 analytic quotient`
+  - DOI: `10.1109/TEVC.2012.2195319`
+- Next action: 正規取得PDFを手動取得後、版・本文を確認して採用判断する

@@ -37,6 +37,8 @@ NOT_AVAILABLE = "not_available"
 class ProblemSpec:
     name: str
     factory: Callable[[], GPProblem]
+    engine_factory: Callable[[GPProblem, MultiObjectiveGPConfig], MultiObjectiveGPEngine] = MultiObjectiveGPEngine
+    run_artifact_writer: Callable[[MultiObjectiveGPEngine, Path], None] | None = None
 
 
 @dataclass(frozen=True)
@@ -198,7 +200,7 @@ def _run_plain_fixed(
     run_dir = output_dir / "runs" / method_name / f"seed_{seed}"
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    engine = MultiObjectiveGPEngine(
+    engine = problem_spec.engine_factory(
         problem_spec.factory(),
         _engine_config(config, seed),
     )
@@ -227,6 +229,8 @@ def _run_plain_fixed(
     _write_jsonl(run_dir / "control_records.jsonl", control_records)
     _write_json(run_dir / "pareto_archive.json", archive)
     _write_json(run_dir / "unique_objective_archive.json", unique_archive)
+    if problem_spec.run_artifact_writer is not None:
+        problem_spec.run_artifact_writer(engine, run_dir)
 
     final_metrics = generation_metrics[-1]
     final_record = records[-1]
@@ -278,7 +282,7 @@ def _run_bogp_current(
     run_dir = output_dir / "runs" / method_name / f"seed_{seed}"
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    engine = MultiObjectiveGPEngine(
+    engine = problem_spec.engine_factory(
         problem_spec.factory(),
         _engine_config(config, seed),
     )
@@ -310,6 +314,8 @@ def _run_bogp_current(
     _write_json(run_dir / "pareto_archive.json", archive)
     _write_json(run_dir / "unique_objective_archive.json", unique_archive)
     _plot_bogp_control_history(run_dir / "control_history.png", control_records)
+    if problem_spec.run_artifact_writer is not None:
+        problem_spec.run_artifact_writer(engine, run_dir)
 
     final_metrics = generation_metrics[-1]
     final_generation = engine.snapshot().generation
