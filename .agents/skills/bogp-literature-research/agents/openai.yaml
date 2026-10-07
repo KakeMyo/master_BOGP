@@ -1,0 +1,6 @@
+interface:
+  display_name: "BOGP文献調査"
+  short_description: "既存の文献取得ルールで検索・本文確認・保存・採番・用途記録を実施"
+  default_prompt: "Use $bogp-literature-research to investigate the requested scholarly literature under master_BOGP's reference acquisition and documentation policy."
+policy:
+  allow_implicit_invocation: true

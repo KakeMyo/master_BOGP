@@ -17,6 +17,17 @@ artifacts unless the user explicitly asks to remove or replace them.
   over the defaults. Read fresh experiment records; do not reuse the example's
   conclusions or rerun experiments merely to write a resume.
 
+## Literature research
+
+- When the user asks to investigate, find, or obtain scholarly literature in
+  this project (for example, "文献調査してください", or "探してください"
+  when referring to papers), read and apply
+  `.agents/skills/bogp-literature-research/SKILL.md`.
+- Read `references/reference_workflow_spec.md` on each use as the authoritative
+  acquisition and recording policy, together with the current reference ledger.
+- Follow explicit topic, destination, and registration instructions. A request
+  to search for code or local files alone does not invoke literature research.
+
 ## Python environment
 
 - Use the repository-local `.venv`; never commit it.
